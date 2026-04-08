@@ -40,6 +40,8 @@
                         class="w-full bg-orange-600 hover:bg-orange-500 text-white font-black italic py-4 rounded-xl transition-all uppercase text-xs tracking-[0.2em] shadow-lg shadow-orange-900/20">
                     Guardar y Finalizar Turno
                 </button>
+                <input type="hidden" name="monto_inicial" value="0"> 
+                <input type="hidden" name="total_ventas_tarjeta" value="0">
             </form>
         </div>
     </div>

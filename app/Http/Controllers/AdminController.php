@@ -106,21 +106,21 @@ class AdminController extends Controller
         return view('admin.corte', compact('ventasDelTurno'));
     }
 
-public function guardarCorte(Request $request)
+    public function guardarCorte(Request $request)
     {
-        // 1. Validación de lo que viene del formulario
+        // 1. Validación
         $request->validate([
             'efectivo_real' => 'required|numeric',
             'ventas_esperadas' => 'required|numeric',
         ]);
-    
-        try {
-            // 2. Calculamos la diferencia
-            $diferencia = $request->efectivo_real - $request->ventas_esperadas;
 
-            // 3. Guardamos el registro en la base de datos
-            CorteCaja::create([
-                'usuario_id'            => Auth::id(),
+        try {
+            // 2. Calculamos la diferencia (mismo nombre que tu columna en DB)
+            $difference = $request->efectivo_real - $request->ventas_esperadas;
+
+            // 3. Guardamos con los nombres EXACTOS de tu imagen (image_212365.png)
+            \App\Models\CorteCaja::create([
+                'usuario_id'            => auth()->id(),
                 'fecha_apertura'        => now(), 
                 'fecha_cierre'          => now(),
                 'monto_inicial'         => $request->monto_inicial ?? 0,
@@ -128,29 +128,23 @@ public function guardarCorte(Request $request)
                 'total_ventas_tarjeta'  => 0, 
                 'total_esperado'        => $request->ventas_esperadas,
                 'total_contado'         => $request->efectivo_real,
-                'diferencia'            => $diferencia,
-                'notas'                 => $request->notas ?? 'Corte de caja realizado'
+                'difference'            => $difference, // <-- CAMBIADO A "difference"
+                'notas'                 => 'Corte de caja realizado'
             ]);
 
-            // --- PROCESO DE CIERRE DE SESIÓN ---
-            
-            // Cerramos la sesión del cajero (tu modelo Usuario)
-            Auth::logout();
-
-            // Destruimos la sesión actual en el servidor por seguridad
+            // 4. CIERRE FORZOSO DE SESIÓN
+            auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            // Redireccionamos al login con el mensaje de éxito
-            return redirect()->route('login')->with('success', '¡Corte guardado! Turno finalizado y sesión cerrada.');
+            return redirect('/login')->with('success', '¡Corte guardado y turno cerrado!');
 
         } catch (\Exception $e) {
-            // Si hay un error al guardar, volvemos atrás para no cerrar la sesión por error
-            return back()->withErrors(['error' => 'Error al guardar el corte: ' . $e->getMessage()])->withInput();
+            // Si falla, aquí verás el error real en pantalla
+            return back()->withErrors(['error' => 'Error en la DB: ' . $e->getMessage()]);
         }
     }
-
-    /**
+        /**
      * GESTIÓN DE USUARIOS (Cajeros)
      */
     public function usuariosIndex()
@@ -201,7 +195,7 @@ public function guardarCorte(Request $request)
         return redirect()->back()->with('success', 'Datos de usuario actualizados.');
     }
 
-    public function usuariosDestroy($id)
+    public function destroy($id)
     {
         if(Auth::id() == $id) {
             return redirect()->back()->with('error', 'No puedes eliminar tu propia cuenta.');

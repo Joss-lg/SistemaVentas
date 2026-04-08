@@ -121,7 +121,7 @@
                 <div class="metodo-pago-box">
                     <span class="bold">PAGO: {{ strtoupper($venta->tipo_pago) }}</span>
                     @if($venta->referencia_pago)
-                        <br>REF: {{ $venta->referencia_pago }}
+                        <br>Folio: {{ $venta->referencia_pago }}
                     @endif
                 </div>
             @endif

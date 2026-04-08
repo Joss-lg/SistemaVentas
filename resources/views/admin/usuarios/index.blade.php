@@ -81,13 +81,14 @@
                                 </button>
 
                                 @if(auth()->user()->id != $user->id)
-                                <form action="{{ route('usuarios.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('¿ELIMINAR ESTE USUARIO?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-lg transition-all">
-                                        <i class="fas fa-trash-alt text-xs"></i>
-                                    </button>
-                                </form>
-                                @endif
+                            <form id="delete-form-{{ $user->id }}" action="{{ route('usuarios.destroy', $user->id) }}" method="POST" class="inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="button" onclick="confirmarEliminar({{ $user->id }})" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-all">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </form>
+                        @endif
                             </div>
                         </td>
                     </tr>
@@ -148,24 +149,39 @@
         const modal = document.getElementById('editModal');
         const form = document.getElementById('editForm');
         
-        // Ajustamos la acción del formulario al ID correcto
         form.action = `/admin/usuarios/${id}`; 
-
-        // Llenamos los datos
         document.getElementById('edit_nombre').value = nombre;
         document.getElementById('edit_username').value = username;
 
-        // Quitamos el hidden para mostrarlo
         modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Bloquea el scroll de fondo
+        document.body.style.overflow = 'hidden';
     }
 
     function closeEditModal() {
         document.getElementById('editModal').classList.add('hidden');
-        document.body.style.overflow = 'auto'; // Libera el scroll
+        document.body.style.overflow = 'auto';
     }
 
-    // Cerrar con tecla Esc
+
+function confirmarEliminar(id) {
+    Swal.fire({
+        title: '¿ESTÁS SEGURO DE ELIMINAR AL USUARIO?',
+        text: "¡Si borras a este usuario ya no podrá entrar al sistema!",
+        icon: 'warning',
+        showCancelButton: true,
+        background: '#111827',
+        color: '#fff',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#4b5563',
+        confirmButtonText: 'SÍ,',
+        cancelButtonText: 'CANCELAR'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('delete-form-' + id).submit();
+        }
+    });
+}
+
     window.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') closeEditModal();
     });

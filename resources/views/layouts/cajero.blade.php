@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Punto de Venta - @yield('title')</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('js/tailwind.js') }}"></script>
+    <script src="{{ asset('js/sweetalert2.js') }}"></script>
+    <script src="{{ asset('/service-worker.js') }}"></script>
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
@@ -93,12 +96,16 @@
             }
         });
         if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => console.log('SW de Abarrotes registrado', reg))
-                .catch(err => console.log('Fallo al registrar SW', err));
-        });
-    }
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => {
+                        console.log('%c🚀 ¡SISTEMA AL TIRO! El chalán ya está cuidando el abarrote, Saúl.', 'color: #00ff00; font-weight: bold; font-size: 12px;');
+                    })
+                    .catch(err => {
+                        console.error('%c⚠️ ¡VALIÓ MADRE! El chalán se quedó dormido: ', 'color: #ff0000; font-weight: bold;', err);
+                    });
+            });
+        }
     </script>
 
     @stack('scripts')

@@ -1,33 +1,45 @@
 const CACHE_NAME = 'abarrotes-v1';
+
 const urlsToCache = [
-    '/admin/gastos',
-    '/admin/ventas',
-    '/css/app.css', 
-    '/js/app.js'
+    '/',
+    '/ventas',
+    '/js/sweetalert2.js',
+    '/js/tailwind.js',
+    '/manifest.json'
 ];
 
-// Instalación: Guarda los archivos en la memoria del navegador
 self.addEventListener('install', e => {
     e.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('Cacheando archivos de Abarrotes...');
-            return cache.addAll(urlsToCache);
+            return Promise.all(
+                urlsToCache.map(url => {
+                    return cache.add(url).catch(err => console.warn('No se guardó en caché:', url));
+                })
+            );
         })
     );
+    self.skipWaiting();
 });
 
-// Activación: Limpia caches viejos si actualizas el sistema
 self.addEventListener('activate', e => {
-    console.log('Service Worker de Abarrotes Activo');
+    e.waitUntil(clients.claim());
 });
 
-// Despachador: Si no hay internet, sirve lo que guardamos en cache
+// ESTE ES EL CAMBIO CLAVE PARA QUITAR LOS ERRORES DE CONSOLA
 self.addEventListener('fetch', e => {
     e.respondWith(
         caches.match(e.request).then(res => {
-            return res || fetch(e.request).catch(() => {
-                // Si falla el fetch y es una página, podrías mandar a una ruta offline
-                return caches.match('/admin/ventas'); 
+            if (res) return res; // Si está en caché, úsalo.
+
+            return fetch(e.request).catch(() => {
+                // Si falla el fetch (offline) y es una navegación (F5), evita el dino
+                if (e.request.mode === 'navigate') {
+                    return caches.match('/ventas') || caches.match('/');
+                }
+                
+                // Si es cualquier otra cosa (como el buscador), responde con un 404 limpio
+                // Esto es lo que quita el error de "Failed to convert value to Response"
+                return new Response('Offline', { status: 404, statusText: 'Offline mode' });
             });
         })
     );

@@ -99,7 +99,7 @@
                             <p class="text-xs text-green-500 font-mono">EXCEL GENERAL</p>
                         </div>
                     </div>
-                    <p class="text-gray-400 mb-6 text-sm">Ventas, Gastos e Inventario en un solo archivo.</p>
+                    <p class="text-gray-400 mb-6 text-sm">Ventas, Cortes de caja, Gastos e Inventario en un solo archivo.</p>
                     <a href="{{ route('admin.reporte.excel') }}" 
                        class="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-green-900/40">
                         <i class="fas fa-download"></i> DESCARGAR

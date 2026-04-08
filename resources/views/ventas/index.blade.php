@@ -214,36 +214,120 @@ let carrito = [];
 let totalVenta = 0;
 let metodoSeleccionado = 'efectivo';
 let productoPendientePeso = null;
-let productoProvSeleccionado = null; // Guardará el producto de entrada de stock
+let productoProvSeleccionado = null; 
+
+// Notificaciones
+const notify = (icon, title) => {
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+        background: '#1a1a1a',
+        color: '#fff'
+    });
+    Toast.fire({ icon, title });
+};
 
 // ==========================================
-// 1. ESCÁNER Y BÚSQUEDA
+// NUEVA LÓGICA: RESPALDO LOCAL DE PRODUCTOS
 // ==========================================
+// Esto guarda una copia de tus productos para que el buscador funcione sin internet
+async function actualizarRespaldoProductos() {
+    if (!navigator.onLine) return;
+    try {
+        const res = await fetch("{{ url('/ventas/buscar-nombre') }}?q="); // O una ruta que traiga tus productos
+        const productos = await res.json();
+        localStorage.setItem('respaldo_productos', JSON.stringify(productos));
+    } catch (e) { console.log("Esperando conexión para respaldar productos..."); }
+}
+
+function buscarLocal(query) {
+    const productos = JSON.parse(localStorage.getItem('respaldo_productos')) || [];
+    return productos.filter(p => 
+        p.descripcion.toLowerCase().includes(query.toLowerCase()) || 
+        p.codigo_barras == query
+    ).slice(0, 10);
+}
+
+// ==========================================
+// SINCRONIZACIÓN OFFLINE
+// ==========================================
+async function sincronizarVentasPendientes() {
+    let ventas = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
+    if (ventas.length === 0) return;
+
+    console.log("Intentando sincronizar " + ventas.length + " ventas pendientes...");
+
+    for (let i = 0; i < ventas.length; i++) {
+        try {
+            const res = await fetch("{{ route('ventas.finalizar') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+                body: JSON.stringify(ventas[i])
+            });
+            
+            if (res.ok) {
+                ventas.splice(i, 1);
+                i--; 
+            }
+        } catch (e) { break; }
+    }
+
+    localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(ventas));
+    if (ventas.length === 0) { notify('success', 'VENTAS SINCRONIZADAS'); }
+}
+
+window.addEventListener('online', () => { sincronizarVentasPendientes(); actualizarRespaldoProductos(); });
+document.addEventListener('DOMContentLoaded', () => { sincronizarVentasPendientes(); actualizarRespaldoProductos(); });
+
+// 1. ESCÁNER Y BÚSQUEDA (MEJORADO OFFLINE)
 document.getElementById('scanner').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
         let codigo = this.value; if (!codigo) return;
-        fetch(`{{ url('/ventas/buscar-producto') }}?codigo=${codigo}`)
-            .then(res => res.json())
-            .then(p => { agregarAlCarrito(p); this.value = ""; })
-            .catch(() => { alert("No encontrado"); this.value = ""; });
+        
+        if (!navigator.onLine) {
+            const p = buscarLocal(codigo)[0];
+            if (p) { agregarAlCarrito(p); this.value = ""; } 
+            else { notify('error', 'No encontrado (Offline)'); this.value = ""; }
+        } else {
+            fetch(`{{ url('/ventas/buscar-producto') }}?codigo=${codigo}`)
+                .then(res => res.json())
+                .then(p => { agregarAlCarrito(p); this.value = ""; })
+                .catch(() => { 
+                    const p = buscarLocal(codigo)[0];
+                    if (p) agregarAlCarrito(p);
+                    else notify('error', 'Producto no encontrado'); 
+                    this.value = ""; 
+                });
+        }
     }
 });
 
 document.getElementById('input-busqueda-nombre').addEventListener('input', function() {
     let q = this.value; if (q.length < 2) return;
-    fetch(`{{ url('/ventas/buscar-nombre') }}?q=${q}`)
-        .then(res => res.json())
-        .then(productos => {
-            let html = "";
-            productos.forEach(p => {
-                const pData = btoa(JSON.stringify(p));
-                html += `<tr class="border-b border-white/5"><td class="p-4 uppercase italic font-black">${p.descripcion}</td>
-                <td class="p-4 text-center text-green-500 font-black">$${parseFloat(p.precio_venta).toFixed(2)}</td>
-                <td class="p-4 text-right"><button onclick="seleccionarProductoVenta('${pData}')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-black italic">Seleccionar</button></td></tr>`;
-            });
-            document.getElementById('resultados-busqueda').innerHTML = html;
+    
+    const render = (productos) => {
+        let html = "";
+        productos.forEach(p => {
+            const pData = btoa(JSON.stringify(p));
+            html += `<tr class="border-b border-white/5"><td class="p-4 uppercase italic font-black">${p.descripcion}</td>
+            <td class="p-4 text-center text-green-500 font-black">$${parseFloat(p.precio_venta).toFixed(2)}</td>
+            <td class="p-4 text-right"><button onclick="seleccionarProductoVenta('${pData}')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-black italic">Seleccionar</button></td></tr>`;
         });
+        document.getElementById('resultados-busqueda').innerHTML = html;
+    };
+
+    if (!navigator.onLine) {
+        render(buscarLocal(q));
+    } else {
+        fetch(`{{ url('/ventas/buscar-nombre') }}?q=${q}`)
+            .then(res => res.json())
+            .then(productos => render(productos))
+            .catch(() => render(buscarLocal(q)));
+    }
 });
 
 function seleccionarProductoVenta(data) {
@@ -251,32 +335,35 @@ function seleccionarProductoVenta(data) {
     cerrarModalBusqueda();
 }
 
-// ==========================================
-// 2. LÓGICA DE PROVEEDORES (CORREGIDA PARA GRANEL Y DESPLAZABLE)
-// ==========================================
+// 2. LÓGICA DE PROVEEDORES (MEJORADO OFFLINE)
 function buscarProductoNombreProveedor(query) {
     const contenedor = document.getElementById('sugerencias-prov');
     if (query.length < 2) { contenedor.classList.add('hidden'); return; }
-    
-    fetch(`{{ url('/ventas/buscar-nombre') }}?q=${query}`)
-        .then(res => res.json())
-        .then(productos => {
-            let html = "";
-            productos.forEach(p => {
-                const pData = btoa(JSON.stringify(p));
-                html += `<div onclick="seleccionarProductoProv('${pData}')" class="p-4 border-b border-white/5 hover:bg-blue-600/20 cursor-pointer transition-all">
-                    <p class="text-white font-black text-xs uppercase italic">${p.descripcion}</p>
-                </div>`;
-            });
-            contenedor.innerHTML = html;
-            contenedor.classList.remove('hidden');
+
+    const renderProv = (productos) => {
+        let html = "";
+        productos.forEach(p => {
+            const pData = btoa(JSON.stringify(p));
+            html += `<div onclick="seleccionarProductoProv('${pData}')" class="p-4 border-b border-white/5 hover:bg-blue-600/20 cursor-pointer transition-all">
+                <p class="text-white font-black text-xs uppercase italic">${p.descripcion}</p>
+            </div>`;
         });
+        contenedor.innerHTML = html; contenedor.classList.remove('hidden');
+    };
+
+    if (!navigator.onLine) {
+        renderProv(buscarLocal(query));
+    } else {
+        fetch(`{{ url('/ventas/buscar-nombre') }}?q=${query}`)
+            .then(res => res.json())
+            .then(productos => renderProv(productos))
+            .catch(() => renderProv(buscarLocal(query)));
+    }
 }
 
 function seleccionarProductoProv(dataBase64) {
     const p = JSON.parse(atob(dataBase64));
     productoProvSeleccionado = p;
-    
     document.getElementById('prov-nombre-display').innerText = p.descripcion;
     document.getElementById('info-producto-prov').classList.remove('hidden');
     document.getElementById('sugerencias-prov').classList.add('hidden');
@@ -291,47 +378,38 @@ function guardarEntradaStock() {
     const metodo = document.getElementById('prov-metodo').value;
 
     if (!productoProvSeleccionado || isNaN(cant) || cant <= 0 || !proveedor) {
-        alert("RELLENA LOS DATOS CORRECTAMENTE");
+        notify('warning', 'RELLENA LOS DATOS CORRECTAMENTE'); return;
+    }
+
+    const payload = { producto_id: productoProvSeleccionado.id, cantidad: cant, costo_total: costo, proveedor: proveedor, metodo_pago: metodo };
+
+    if (!navigator.onLine) {
+        // Guardamos entradas de stock offline también si quieres
+        let colaStock = JSON.parse(localStorage.getItem('cola_stock_offline')) || [];
+        colaStock.push(payload);
+        localStorage.setItem('cola_stock_offline', JSON.stringify(colaStock));
+        notify('warning', 'STOCK GUARDADO OFFLINE');
+        abrirCajonManual();
+        setTimeout(() => location.reload(), 1500);
         return;
     }
 
-    // Primero guardamos en la BD
     fetch("{{ route('inventario.agregar-stock') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
-        body: JSON.stringify({
-            producto_id: productoProvSeleccionado.id,
-            cantidad: cant,
-            costo_total: costo,
-            proveedor: proveedor,
-            metodo_pago: metodo
-        })
+        body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-        // 1. Abrimos una ventana pequeña para mandar el pulso al cajón
-        // Esto cargará la vista 'abrir_cajon' que ya tienes en tu carpeta 'impresion'
-        const win = window.open("{{ route('impresion.abrir-cajon') }}", '_blank', 'width=100,height=100');
-        
-        // Cerramos la ventanita del cajón automáticamente tras medio segundo
-        if(win) setTimeout(() => win.close(), 500);
-
-        alert("¡MERCANCÍA REGISTRADA Y CAJÓN ABIERTO!");
-        location.reload(); 
-    } else {
-        alert("Error: " + data.mensaje);
-    }
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        alert("Error de conexión al servidor");
+            abrirCajonManual();
+            notify('success', 'MERCANCÍA REGISTRADA');
+            setTimeout(() => location.reload(), 1500);
+        }
     });
 }
 
-// ==========================================
-// 3. FUNCIONES DE CARRITO Y TABLA
-// ==========================================
+// 3. CARRITO Y TABLA
 function agregarAlCarrito(producto) {
     if (producto.unidad_medida === 'kg' || producto.unidad_medida === 'granel') {
         productoPendientePeso = producto;
@@ -373,74 +451,25 @@ function renderizarTabla() {
 
 function eliminarItem(i) { carrito.splice(i, 1); renderizarTabla(); }
 
-// ==========================================
 // 4. LÓGICA DE COBRO
-// ==========================================
-// ==========================================
-// Incluicion de cobro offline
-//===========================================
 function cobrar() {
-    // 1. Validaciones iniciales
-    if (carrito.length === 0) return alert("Carrito vacío");
-
-    // 2. Preparar los datos que se van a guardar (IMPORTANTE)
-    // Usamos los nombres de columnas que vimos en tus tablas de MySQL
-    const datosVenta = {
-        productos: carrito, // Array con los productos (id, cantidad, precio)
-        total: totalVenta,
-        fecha: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-        hora: new Date().toLocaleTimeString('it-IT'), // Formato 24h
-        metodo_pago: metodoSeleccionado || 'efectivo', // Captura el método elegido
-        vendedor: 'Caja 1' // Puedes hacerlo dinámico después
-    };
-
-    // 3. Mostrar resumen en el modal (Interfaz)
+    if (carrito.length === 0) { notify('info', 'Carrito vacío'); return; }
     document.getElementById('resumen-articulos').innerText = carrito.length;
     document.getElementById('resumen-total').innerText = totalVenta.toFixed(2);
     document.getElementById('modal-cobro').classList.remove('hidden');
     setMetodo('efectivo');
-
-    // 4. Lógica de Conexión (Offline vs Online)
-    if (!navigator.onLine) {
-        // --- MODO OFFLINE ---
-        // Recuperamos lo que ya esté en la "cola", si no hay nada, empezamos array vacío
-        let ventasPendientes = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
-        
-        // Metemos la nueva venta al paquete
-        ventasPendientes.push(datosVenta);
-        
-        // Guardamos de vuelta en la memoria de la PC
-        localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(ventasPendientes));
-
-        alert("⚠️ SIN INTERNET: Venta guardada en la memoria local de Abarrotes. Se sincronizará sola al volver la red.");
-        
-        finalizarProcesoVenta(); // Función para limpiar pantalla y cerrar modal
-        return;
-    }
-
-    // --- MODO ONLINE ---
-    // Si hay internet, se va directo a tu base de datos de Laravel
-    enviarVentaAlServidor(datosVenta);
 }
-
 
 function setMetodo(t) {
     metodoSeleccionado = t;
-    const btnE = document.getElementById('btn-efectivo');
-    const btnT = document.getElementById('btn-tarjeta');
-    const btnTr = document.getElementById('btn-transferencia');
+    const btnE = document.getElementById('btn-efectivo'), btnT = document.getElementById('btn-tarjeta'), btnTr = document.getElementById('btn-transferencia');
     const montoInput = document.getElementById('monto-recibido');
-
-    [btnE, btnT, btnTr].forEach(b => {
-        if (b) b.className = "border-2 border-white/5 bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-white opacity-50";
-    });
-
+    [btnE, btnT, btnTr].forEach(b => { if (b) b.className = "border-2 border-white/5 bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-white opacity-50"; });
     const btnSel = document.getElementById(`btn-${t}`);
     if (btnSel) {
         btnSel.classList.remove('opacity-50', 'border-white/5', 'bg-white/5');
         btnSel.classList.add(t === 'efectivo' ? 'border-green-500' : 'border-blue-500', 'bg-white/10');
     }
-
     if (t === 'efectivo') {
         document.getElementById('container-monto').classList.remove('hidden');
         document.getElementById('container-folio').classList.add('hidden');
@@ -467,45 +496,27 @@ function sumarMonto(v) {
 }
 
 function finalizarProcesoCobro() {
-    let montoRecibido = 0;
-    let folio = document.getElementById('folio-pago').value;
-
-    // 1. Validaciones de dinero (Se quedan igual)
+    let montoRecibido = 0, folio = document.getElementById('folio-pago').value;
     if (metodoSeleccionado === 'efectivo') {
         montoRecibido = parseFloat(document.getElementById('monto-recibido').value);
-        if (isNaN(montoRecibido) || montoRecibido < totalVenta) return alert("Monto insuficiente");
+        if (isNaN(montoRecibido) || montoRecibido < totalVenta) { notify('error', 'Monto insuficiente'); return; }
     } else {
         montoRecibido = totalVenta;
-        if (!folio) return alert("INGRESE EL FOLIO");
+        if (!folio) { notify('warning', 'INGRESE EL FOLIO'); return; }
     }
 
-    // 2. Preparamos el paquete de datos (El objeto que va a la DB o al LocalStorage)
-    const payloadVenta = { 
-        total: totalVenta, 
-        metodo_pago: metodoSeleccionado, 
-        referencia_pago: folio,
-        monto_recibido: montoRecibido, 
-        cambio: montoRecibido - totalVenta, 
-        productos: carrito,
-        fecha_local: new Date().toLocaleString() // Para saber a qué hora fue la venta offline
-    };
+    const payloadVenta = { total: totalVenta, metodo_pago: metodoSeleccionado, referencia_pago: folio, monto_recibido: montoRecibido, cambio: montoRecibido - totalVenta, productos: carrito, fecha_local: new Date().toLocaleString() };
 
-    // 3. LA DECISIÓN CRÍTICA: ¿Hay internet?
     if (!navigator.onLine) {
-        // --- MODO OFFLINE ---
         let cola = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
         cola.push(payloadVenta);
         localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(cola));
-
-        // LA MAGIA: Imprimimos el ticket de emergencia
-        imprimirTicketOffline(payloadVenta);
-
-        alert("⚠️ VENTA GUARDADA Y TICKET GENERADO LOCALMENTE.");
+        abrirCajonManual(); 
+        notify('warning', 'VENTA GUARDADA OFFLINE');
         ejecutarLimpiezaPostVenta();
         return;
     }
 
-    // --- MODO ONLINE (Tu código original con fetch) ---
     fetch("{{ route('ventas.finalizar') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
@@ -513,55 +524,77 @@ function finalizarProcesoCobro() {
     })
     .then(res => res.json())
     .then(data => {
-        if(data.status === 'success') { 
-            alert("VENTA COMPLETADA"); 
+        if(data.status === 'success') {
             window.open(`/ventas/ticket/${data.venta_id}`, "Ticket", "width=400,height=600");
             ejecutarLimpiezaPostVenta();
         }
     })
-    .catch(err => {
-        // Por si el internet falla justo en el momento del clic
-        console.error("Error de red, guardando offline...", err);
+    .catch(() => {
         let cola = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
-        cola.push(payloadVenta);
-        localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(cola));
-        ejecutarLimpiezaPostVenta();
+        cola.push(payloadVenta); localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(cola));
+        abrirCajonManual(); ejecutarLimpiezaPostVenta();
     });
 }
 
-// Creamos esta funcioncita para no repetir código de limpieza
 function ejecutarLimpiezaPostVenta() {
-    carrito = []; 
-    renderizarTabla(); 
-    cerrarModalCobro();
-    const scanner = document.getElementById('scanner');
-    if(scanner) scanner.focus();
+    carrito = []; renderizarTabla(); cerrarModalCobro();
+    if(document.getElementById('scanner')) document.getElementById('scanner').focus();
 }
 
-// ==========================================
-// 5. PAUSA Y RECUPERACIÓN
-// ==========================================
+// 5. PAUSA Y RECUPERACIÓN (F2 y F4 - MEJORADO OFFLINE)
 async function pausarVenta() {
-    if (carrito.length === 0) return alert("No hay productos");
-    const res = await fetch("{{ route('ventas.pausar') }}", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
-        body: JSON.stringify({ productos: carrito })
-    });
-    const data = await res.json();
-    if (data.status === 'success') { alert("EN ESPERA"); carrito = []; renderizarTabla(); }
+    if (carrito.length === 0) return;
+    
+    // Lo guardamos en localStorage para que funcione siempre
+    let pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
+    pausadas.push({ id: Date.now(), fecha: new Date(), productos: carrito });
+    localStorage.setItem('ventas_pausadas_local', JSON.stringify(pausadas));
+
+    // Intentamos avisar al servidor pero si no hay red no importa
+    if (navigator.onLine) {
+        fetch("{{ route('ventas.pausar') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+            body: JSON.stringify({ productos: carrito })
+        });
+    }
+
+    notify('success', 'EN ESPERA (LOCAL)');
+    carrito = []; renderizarTabla();
 }
 
 function abrirModalRecuperar() {
     document.getElementById('modalVentasEspera').classList.remove('hidden');
-    fetch('/admin/ventas-espera/listar').then(res => res.json()).then(data => {
-        const tbody = document.getElementById('listaVentasEspera');
-        tbody.innerHTML = '';
-        data.forEach(v => {
-            tbody.innerHTML += `<tr><td class="p-4">${new Date(v.fecha_pausa).toLocaleString()}</td>
-            <td class="p-4 text-right"><button onclick="recuperar(${v.id})" class="bg-blue-600 px-4 py-2 rounded">Seleccionar</button></td></tr>`;
-        });
+    const tbody = document.getElementById('listaVentasEspera');
+    tbody.innerHTML = '';
+
+    // Priorizamos las ventas guardadas localmente
+    const pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
+    pausadas.forEach(v => {
+        tbody.innerHTML += `<tr><td class="p-4 text-white">${new Date(v.fecha).toLocaleString()} (Local)</td>
+        <td class="p-4 text-right"><button onclick="recuperarLocal(${v.id})" class="bg-green-600 text-white px-4 py-2 rounded">Seleccionar</button></td></tr>`;
     });
+
+    // Si hay red, buscamos las del servidor también
+    if (navigator.onLine) {
+        fetch('/admin/ventas-espera/listar').then(res => res.json()).then(data => {
+            data.forEach(v => {
+                tbody.innerHTML += `<tr><td class="p-4 text-white">${new Date(v.fecha_pausa).toLocaleString()} (Nube)</td>
+                <td class="p-4 text-right"><button onclick="recuperar(${v.id})" class="bg-blue-600 text-white px-4 py-2 rounded">Seleccionar</button></td></tr>`;
+            });
+        });
+    }
+}
+
+function recuperarLocal(id) {
+    let pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
+    const venta = pausadas.find(v => v.id === id);
+    if (venta) {
+        carrito = venta.productos;
+        renderizarTabla();
+        localStorage.setItem('ventas_pausadas_local', JSON.stringify(pausadas.filter(v => v.id !== id)));
+        cerrarModalRecuperar();
+    }
 }
 
 async function recuperar(id) {
@@ -570,94 +603,19 @@ async function recuperar(id) {
     if (data.status === 'success') { carrito = data.carrito; renderizarTabla(); cerrarModalRecuperar(); }
 }
 
-// ==========================================
-// 6. CONTROL MODALES Y TECLAS
-// ==========================================
-function abrirModalProveedor() { 
-    document.getElementById('modal-proveedor').classList.remove('hidden'); 
-    setTimeout(() => document.getElementById('busqueda-prod-prov').focus(), 200); 
+// 6. CONTROL MODALES Y CAJÓN
+function abrirCajonManual() {
+    const win = window.open("{{ route('impresion.abrir-cajon') }}", '_blank', 'width=1,height=1');
+    if(win) setTimeout(() => win.close(), 500);
 }
-function cerrarModalProveedor() { 
-    document.getElementById('modal-proveedor').classList.add('hidden'); 
-    productoProvSeleccionado = null;
-    document.getElementById('info-producto-prov').classList.add('hidden');
-}
+
+function abrirModalProveedor() { document.getElementById('modal-proveedor').classList.remove('hidden'); setTimeout(() => document.getElementById('busqueda-prod-prov').focus(), 200); }
+function cerrarModalProveedor() { document.getElementById('modal-proveedor').classList.add('hidden'); productoProvSeleccionado = null; }
 function abrirModalBusqueda() { document.getElementById('modal-busqueda').classList.remove('hidden'); document.getElementById('input-busqueda-nombre').focus(); }
 function cerrarModalBusqueda() { document.getElementById('modal-busqueda').classList.add('hidden'); }
 function cerrarModalPeso() { document.getElementById('modal-peso').classList.add('hidden'); }
 function cerrarModalCobro() { document.getElementById('modal-cobro').classList.add('hidden'); }
 function cerrarModalRecuperar() { document.getElementById('modalVentasEspera').classList.add('hidden'); }
-
-function imprimirTicketOffline(datos) {
-    // Abrimos una ventana fantasma
-    const ventana = window.open('', 'PRINT', 'height=600,width=400');
-    
-    // Obtenemos la fecha y hora actual para el ticket
-    const ahora = new Date();
-    const fechaFormateada = ahora.toLocaleDateString() + ' ' + ahora.toLocaleTimeString();
-
-    ventana.document.write(`
-        <html>
-            <head>
-                <style>
-                    @page { margin: 0; }
-                    body {
-                        font-family: 'Courier New', Courier, monospace;
-                        font-size: 12px;
-                        width: 58mm;
-                        margin: 0; padding: 0;
-                    }
-                    .ticket { width: 48mm; padding: 2mm; margin: 0 auto; }
-                    .centered { text-align: center; }
-                    .bold { font-weight: bold; }
-                    .uppercase { text-transform: uppercase; }
-                    .separator { border-top: 1px dashed black; margin: 5px 0; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th { text-align: left; border-bottom: 1px solid black; font-size: 10px; }
-                    .total-row { font-size: 14px; font-weight: bold; text-align: right; }
-                </style>
-            </head>
-            <body onload="window.print(); window.close();">
-                <div class="ticket">
-                    <div class="centered">
-                        <h1 style="font-size: 16px; margin:0;">ABARROTES</h1>
-                        <p style="font-size: 9px;">VENTA LOCAL (SIN RED)</p>
-                    </div>
-                    <div class="separator"></div>
-                    <p><strong>FOLIO:</strong> PENDIENTE</p>
-                    <p><strong>FECHA:</strong> ${fechaFormateada}</p>
-                    <div class="separator"></div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>CANT</th>
-                                <th>DESC</th>
-                                <th style="text-align:right;">SUB</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${datos.productos.map(p => `
-                                <tr>
-                                    <td>${Math.floor(p.cantidad)}</td>
-                                    <td class="uppercase">${(p.descripcion || 'PRODUCTO').substring(0, 15)}</td>
-                                    <td style="text-align:right;">$${(p.cantidad * p.precio).toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    <div class="separator"></div>
-                    <div class="total-row">TOTAL: $${datos.total.toFixed(2)}</div>
-                    <div class="centered" style="margin-top:10px;">
-                        <p class="bold">¡GRACIAS POR SU COMPRA!</p>
-                        <p>Venta guardada en memoria local</p>
-                    </div>
-                </div>
-            </body>
-        </html>
-    `);
-
-    ventana.document.close();
-}
 
 window.addEventListener('keydown', e => {
     if (e.key === 'F2') { e.preventDefault(); abrirModalRecuperar(); }
@@ -665,9 +623,9 @@ window.addEventListener('keydown', e => {
     if (e.key === 'F8') { e.preventDefault(); abrirModalProveedor(); }
     if (e.key === 'F9') { e.preventDefault(); cobrar(); }
     if (e.key === 'F10') { e.preventDefault(); abrirModalBusqueda(); }
-    if (e.key === 'Escape') { 
-        cerrarModalBusqueda(); cerrarModalCobro(); cerrarModalPeso(); 
-        cerrarModalProveedor(); cerrarModalRecuperar(); 
+    if (e.key === 'Escape') {
+        cerrarModalBusqueda(); cerrarModalCobro(); cerrarModalPeso();
+        cerrarModalProveedor(); cerrarModalRecuperar();
         document.getElementById('scanner').focus();
     }
 });

@@ -79,15 +79,15 @@
             </td>
             
             <td class="p-4 text-right">
-                {{-- Validamos que solo el admin vea y use el botón --}}
                 @if(auth()->user()->username == 'admin')
-                <form action="{{ route('ventas.cancelar', $venta->id) }}" method="POST" onsubmit="return confirm('¿Borrar esta venta para siempre?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn-rojo">
-                        Anular y Borrar
-                    </button>
-                </form>
+                    {{-- Formulario con ID único para que el JS sepa cuál mandar --}}
+                    <form id="form-eliminar-{{ $venta->id }}" action="{{ route('ventas.cancelar', $venta->id) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" onclick="confirmarCancelacion({{ $venta->id }})" class="btn-rojo">
+                            Anular y Borrar
+                        </button>
+                    </form>
                 @else
                     <span class="text-[9px] font-black text-zinc-700 italic uppercase">Bloqueado</span>
                 @endif
@@ -109,4 +109,30 @@
     </div>
 
 </div>
+
+<script>
+    function confirmarCancelacion(id) {
+        Swal.fire({
+            title: '¿ANULAR VENTA?',
+            text: "Esta acción borrará el registro para siempre y no hay marcha atrás.",
+            icon: 'warning',
+            showCancelButton: true,
+            background: '#0d0d0d', // Fondo oscuro
+            color: '#ffffff',      // Texto blanco
+            confirmButtonColor: '#ef4444', // Rojo
+            cancelButtonColor: '#27272a',  // Gris oscuro
+            confirmButtonText: 'SÍ ',
+            cancelButtonText: 'MEJOR NO',
+            heightAuto: false,
+            customClass: {
+                popup: 'border border-white/10'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Si el admin confirma, mandamos el form correspondiente
+                document.getElementById('form-eliminar-' + id).submit();
+            }
+        });
+    }
+</script>
 @endsection
