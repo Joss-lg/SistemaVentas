@@ -3,10 +3,19 @@
 @section('title', 'Punto de Venta')
 
 @section('content')
+{{-- Estilo para el Modo Híbrido y x-cloak --}}
+<style>
+    [x-cloak] { display: none !important; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 10px; }
+</style>
+
 <div class="grid grid-cols-12 gap-6 h-[calc(100vh-160px)]">
-    <div class="col-span-8 bg-[#0d0d0d] border border-white/5 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white">
-        <div class="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-            <h3 class="text-gray-500 font-black uppercase text-xs tracking-[0.3em]">Lista de Compra</h3>
+    {{-- LISTA DE COMPRA --}}
+    <div class="col-span-8 bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-zinc-900 dark:text-white transition-all">
+        <div class="p-6 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02] flex justify-between items-center">
+            <h3 class="text-zinc-500 dark:text-gray-500 font-black uppercase text-xs tracking-[0.3em]">Lista de Compra</h3>
             <span class="bg-red-600/10 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-red-600/20">
                 F1 Activo
             </span>
@@ -14,8 +23,8 @@
 
         <div class="flex-1 overflow-y-auto custom-scrollbar">
             <table class="w-full text-left">
-                <thead class="sticky top-0 bg-[#0d0d0d] z-10">
-                    <tr class="text-gray-600 uppercase font-black border-b border-white/5 text-[10px] tracking-[0.2em]">
+                <thead class="sticky top-0 bg-white dark:bg-[#0d0d0d] z-10">
+                    <tr class="text-zinc-400 dark:text-gray-600 uppercase font-black border-b border-zinc-100 dark:border-white/5 text-[10px] tracking-[0.2em]">
                         <th class="p-6">Cant.</th>
                         <th class="p-6">Descripción</th>
                         <th class="p-6 text-center">Precio</th>
@@ -23,19 +32,24 @@
                         <th class="p-6 text-right w-20"></th> 
                     </tr>
                 </thead>
-                <tbody id="lista-productos" class="divide-y divide-white/5 font-bold italic"></tbody>
+                <tbody id="lista-productos" class="divide-y divide-zinc-100 dark:divide-white/5 font-bold italic">
+                    {{-- Dinámico con JS --}}
+                </tbody>
             </table>
         </div>
     </div>
 
+    {{-- LATERAL DERECHO --}}
     <div class="col-span-4 flex flex-col gap-6">
-        <div class="bg-[#0d0d0d] border border-red-600/30 p-6 rounded-2xl shadow-2xl">
+        {{-- SCANNER --}}
+        <div class="bg-white dark:bg-[#0d0d0d] border border-red-600/30 p-6 rounded-2xl shadow-2xl">
             <label class="block text-red-600 text-[10px] font-black mb-3 uppercase tracking-[0.4em]">Escáner de Código</label>
             <input type="text" id="scanner" autofocus
-                class="w-full bg-black border-b-2 border-red-600 text-red-500 text-5xl p-4 focus:outline-none font-black placeholder-zinc-900 transition-all focus:bg-red-600/5"
+                class="w-full bg-zinc-100 dark:bg-black border-b-2 border-red-600 text-red-600 dark:text-red-500 text-5xl p-4 focus:outline-none font-black placeholder-zinc-300 dark:placeholder-zinc-900 transition-all focus:bg-red-600/5"
                 placeholder="|||||||||||||">
         </div>
 
+        {{-- TOTAL --}}
         <div class="bg-red-600 p-8 rounded-2xl text-white shadow-[0_20px_50px_rgba(220,38,38,0.25)] relative overflow-hidden group">
             <div class="absolute -right-4 -top-4 text-white/10 text-9xl font-black italic rotate-12 group-hover:rotate-0 transition-transform">$</div>
             <p class="text-xs font-black uppercase opacity-60 italic tracking-widest relative z-10">Total a Cobrar</p>
@@ -45,163 +59,219 @@
             </div>
         </div>
 
+        {{-- ACCIONES --}}
         <div class="grid grid-cols-1 gap-3">
             <button onclick="cobrar()" class="w-full bg-green-600 hover:bg-green-500 text-white p-6 rounded-xl font-black text-2xl transition active:scale-95 uppercase italic shadow-lg flex justify-between items-center px-10">
                 <span>COBRAR</span>
-                <span class="opacity-50">[F9]</span>
+                <span class="opacity-50 text-sm">[F9]</span>
             </button>
             
             <button onclick="abrirModalRecuperar()" class="w-full bg-orange-600 hover:bg-orange-500 text-white p-4 rounded-xl font-black text-lg transition active:scale-95 uppercase italic shadow-lg flex justify-between items-center px-10 border border-orange-400/20">
                 <span>RECUPERAR VENTA</span>
-                <span class="opacity-50">[F2]</span>
+                <span class="opacity-50 text-sm">[F2]</span>
             </button>
 
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="abrirModalBusqueda()" class="bg-white/5 hover:bg-white/10 text-gray-400 p-4 rounded-xl font-black uppercase transition border border-white/5 tracking-widest">[F10] BUSCAR</button>
-                <button onclick="pausarVenta()" class="bg-orange-600/10 hover:bg-orange-600/20 text-orange-500 p-4 rounded-xl font-black uppercase transition border border-orange-600/20 tracking-widest">
+                <button onclick="abrirModalBusqueda()" class="bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-gray-400 p-4 rounded-xl font-black uppercase transition border border-zinc-200 dark:border-white/5 tracking-widest text-xs">[F10] BUSCAR</button>
+                <button onclick="pausarVenta()" class="bg-orange-600/10 hover:bg-orange-600/20 text-orange-600 dark:text-orange-500 p-4 rounded-xl font-black uppercase transition border border-orange-600/20 tracking-widest text-xs">
                     [F4] ESPERA
                 </button>
             </div>
             
-            <button onclick="abrirModalProveedor()" class="w-full bg-blue-900/20 hover:bg-blue-900/40 text-blue-400 p-2 rounded-xl font-black text-[20px] transition uppercase tracking-[0.2em] border border-blue-500/20">
+            <button onclick="abrirModalProveedor()" class="w-full bg-blue-600/10 dark:bg-blue-900/20 hover:bg-blue-600/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 p-3 rounded-xl font-black text-lg transition uppercase tracking-[0.2em] border border-blue-500/20">
                 [F8] ENTRADA PROVEEDOR
             </button>
         </div>
     </div>
 </div>
 
+{{-- MODAL PROVEEDOR --}}
 <div id="modal-proveedor" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#0d0d0d] border border-white/10 p-8 rounded-3xl w-full max-w-lg shadow-2xl relative">
-        <h2 class="text-2xl font-black italic uppercase text-white mb-6">Entrada de <span class="text-red-600">Stock</span></h2>
+    <div class="bg-white dark:bg-[#1a1a1a] w-full max-w-6xl rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-white/5 transition-colors duration-300">
         
-        <div class="space-y-4">
-            <div class="relative">
-                <label class="text-xs font-bold text-gray-400 uppercase italic">1. Buscar Producto</label>
-                <input type="text" id="busqueda-prod-prov" oninput="buscarProductoNombreProveedor(this.value)" placeholder="Escribe nombre del producto..." 
-                    class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white text-sm focus:border-blue-500 outline-none" autocomplete="off">
-                <div id="sugerencias-prov" class="absolute left-0 right-0 top-full z-[100] hidden bg-[#1a1a1a] border border-white/10 rounded-xl mt-1 shadow-2xl max-h-60 overflow-y-auto"></div>
+        <div class="p-8 flex justify-between items-center border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
+            <h2 class="text-4xl font-black italic uppercase tracking-tighter text-zinc-800 dark:text-white">
+                Entrada de <span class="text-red-600">Mercancía</span>
+            </h2>
+            <button onclick="cerrarModalProveedor()" class="text-gray-400 hover:text-red-600 transition-all p-2">
+                <i class="fas fa-times text-4xl"></i>
+            </button>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-10 p-10">
+            <div class="w-full md:w-1/3 space-y-8">
+                <div>
+                    <label class="block text-xs font-black uppercase text-zinc-400 mb-2 italic tracking-widest">Proveedor / Factura</label>
+                    <input type="text" id="prov-nombre" 
+                        class="w-full bg-blue-50 dark:bg-blue-900/20 border-0 rounded-2xl p-6 font-black uppercase italic text-zinc-700 dark:text-blue-200 text-2xl focus:ring-4 focus:ring-blue-500/20 shadow-sm" 
+                        placeholder="EJ. BIMBO">
+                </div>
+
+                <div class="relative">
+                    <label class="block text-xs font-black uppercase text-zinc-400 mb-2 italic tracking-widest">Buscar Producto</label>
+                    <input type="text" id="busqueda-prod-prov" oninput="buscarProductoNombreProveedor(this.value)" 
+                        class="w-full bg-zinc-100 dark:bg-white/5 border-0 rounded-2xl p-6 font-black uppercase italic text-zinc-700 dark:text-white text-2xl focus:ring-4 focus:ring-red-500/20 shadow-sm" 
+                        placeholder="ESCRIBE NOMBRE...">
+                    
+                    <div id="sugerencias-prov" class="absolute z-20 w-full bg-white dark:bg-[#2a2a2a] shadow-2xl rounded-2xl mt-3 hidden max-h-72 overflow-y-auto p-2 border border-gray-100 dark:border-white/10"></div>
+                </div>
+
+                <div id="info-producto-prov" class="hidden bg-white dark:bg-white/5 border-2 border-red-500 rounded-[2.5rem] p-8 shadow-2xl space-y-6">
+                    <p id="prov-nombre-display" class="font-black uppercase italic text-red-600 dark:text-red-500 text-xl border-b border-gray-100 dark:border-white/10 pb-4"></p>
+                    
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-[10px] font-black text-zinc-400 uppercase mb-2">Cantidad</label>
+                            <input type="number" id="prov-cantidad" value="1" step="0.001" 
+                                class="w-full bg-zinc-50 dark:bg-white/5 border-0 rounded-2xl p-6 font-black text-center text-3xl text-zinc-800 dark:text-white focus:ring-0">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-zinc-400 uppercase mb-2">Costo Unit.</label>
+                            <input type="number" id="prov-costo-total" step="0.01" 
+                                class="w-full bg-zinc-50 dark:bg-white/5 border-0 rounded-2xl p-6 font-black text-center text-3xl text-green-600 dark:text-green-400 focus:ring-0" 
+                                placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <button onclick="agregarAListaTemporalProv()" 
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-black italic py-6 rounded-2xl transition-all shadow-lg shadow-red-200 dark:shadow-none active:scale-95 uppercase text-lg">
+                        + AGREGAR A LA LISTA
+                    </button>
+                </div>
             </div>
 
-            <div id="info-producto-prov" class="hidden bg-blue-500/10 border border-blue-500/30 p-4 rounded-2xl">
-                <p class="text-blue-400 text-xs font-bold uppercase italic">Seleccionado:</p>
-                <p id="prov-nombre-display" class="text-white font-black uppercase text-sm"></p>
-            </div>
+            <div class="w-full md:w-2/3 bg-white dark:bg-white/5 rounded-[2.5rem] border border-gray-100 dark:border-white/5 overflow-hidden flex flex-col shadow-inner">
+                <div class="bg-zinc-900 p-6 flex justify-between items-center">
+                    <span class="text-xs font-black uppercase text-zinc-400 italic tracking-widest">Lista de Carga</span>
+                    <span id="contador-items-prov" class="bg-red-600 text-white text-[10px] px-5 py-2 rounded-full font-black uppercase italic">0 PRODUCTOS</span>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto min-h-[400px] max-h-[500px]">
+                    <table class="w-full text-left">
+                        <thead class="sticky top-0 bg-zinc-50 dark:bg-[#252525] text-[10px] font-black uppercase text-zinc-400 border-b border-gray-100 dark:border-white/5">
+                            <tr>
+                                <th class="p-6 italic">CANT</th>
+                                <th class="p-6 italic">DESCRIPCIÓN</th>
+                                <th class="p-6 text-right italic">COSTO U.</th>
+                                <th class="p-6 text-right italic">SUBTOTAL</th>
+                                <th class="p-6 w-20"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-items-prov" class="text-2xl font-black uppercase italic text-zinc-800 dark:text-zinc-200">
+                            </tbody>
+                    </table>
+                </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase italic">Proveedor</label>
-                    <input type="text" id="prov-nombre" placeholder="Ej. COCA COLA" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white uppercase text-sm">
+                <div class="p-10 bg-zinc-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5">
+                    <button onclick="guardarEntradaStock()" 
+                        class="w-full bg-[#10b981] hover:bg-[#059669] text-white font-black italic py-8 rounded-[1.8rem] transition-all shadow-xl shadow-emerald-200 dark:shadow-none uppercase tracking-widest active:scale-95 text-2xl">
+                        GUARDAR EN INVENTARIO
+                    </button>
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase italic">Costo Total ($)</label>
-                    <input type="number" id="prov-costo-total" step="0.01" placeholder="0.00" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase italic">Cantidad</label>
-                    <input type="number" id="prov-cantidad" step="0.001" placeholder="1" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase italic">Método</label>
-                    <select id="prov-metodo" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white text-sm">
-                        <option value="efectivo">Efectivo</option>
-                        <option value="transferencia">Transferencia</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex gap-3 pt-4">
-                <button onclick="cerrarModalProveedor()" class="flex-1 p-4 rounded-xl font-bold uppercase text-xs text-gray-400 hover:bg-white/5 transition">Cancelar</button>
-                <button onclick="guardarEntradaStock()" class="flex-1 p-4 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold uppercase text-xs shadow-lg transition">Registrar e Imprimir</button>
             </div>
         </div>
     </div>
 </div>
-
-<div id="modal-cobro" class="hidden fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
-    <div class="bg-[#0d0d0d] border border-white/10 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl p-8">
+{{-- MODAL COBRO --}}
+<div id="modal-cobro" class="hidden fixed inset-0 bg-zinc-900/90 dark:bg-black/95 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+    <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/10 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl p-8">
         <div class="flex justify-between items-center mb-6">
             <div>
-                <p class="text-gray-500 text-[10px] font-black uppercase tracking-widest">Artículos: <span id="resumen-articulos" class="text-white">0</span></p>
-                <h2 class="text-4xl font-black text-white italic">Total:</h2>
+                <p class="text-zinc-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest">Artículos: <span id="resumen-articulos" class="text-zinc-900 dark:text-white">0</span></p>
+                <h2 class="text-4xl font-black text-zinc-900 dark:text-white italic">TOTAL:</h2>
             </div>
             <div class="text-right">
-                <span class="text-5xl font-black text-green-500 italic">$<span id="resumen-total">0.00</span></span>
+                <span class="text-5xl font-black text-green-600 dark:text-green-500 italic">$<span id="resumen-total">0.00</span></span>
             </div>
         </div>
-        <div class="bg-white/5 border border-white/5 rounded-2xl p-4 mb-6 flex justify-between items-center">
-            <span class="text-gray-400 font-black uppercase text-xs tracking-widest">Su Cambio:</span>
-            <span id="display-cambio" class="text-3xl font-black text-yellow-500 italic">$0.00</span>
+        <div class="bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 rounded-2xl p-4 mb-6 flex justify-between items-center transition-all">
+            <span class="text-zinc-400 dark:text-gray-400 font-black uppercase text-xs tracking-widest">Su Cambio:</span>
+            <span id="display-cambio" class="text-3xl font-black text-yellow-600 dark:text-yellow-500 italic">$0.00</span>
         </div>
-        <p class="text-[10px] font-black text-gray-600 uppercase mb-3 tracking-widest">Método de Pago</p>
+        
+        <p class="text-[10px] font-black text-zinc-400 dark:text-gray-600 uppercase mb-3 tracking-widest">Método de Pago</p>
         <div class="grid grid-cols-3 gap-3 mb-6">
             <button onclick="setMetodo('efectivo')" id="btn-efectivo" class="border-2 border-green-500 bg-green-500/10 p-4 rounded-2xl flex flex-col items-center transition">
-                <span class="text-green-500 font-black uppercase italic text-xs">Efectivo</span>
+                <span class="text-green-600 dark:text-green-500 font-black uppercase italic text-[10px]">Efectivo</span>
             </button>
-            <button onclick="setMetodo('tarjeta')" id="btn-tarjeta" class="border-2 border-white/5 bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-white">
-                <span class="text-gray-400 font-black uppercase italic text-xs">Tarjeta</span>
+            <button onclick="setMetodo('tarjeta')" id="btn-tarjeta" class="border-2 border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-zinc-500 dark:text-white">
+                <span class="text-zinc-400 dark:text-gray-400 font-black uppercase italic text-[10px]">Tarjeta</span>
             </button>
-            <button onclick="setMetodo('transferencia')" id="btn-transferencia" class="border-2 border-white/5 bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-white">
-                <span class="text-gray-400 font-black uppercase italic text-xs">Transf.</span>
+            <button onclick="setMetodo('transferencia')" id="btn-transferencia" class="border-2 border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-zinc-500 dark:text-white">
+                <span class="text-zinc-400 dark:text-gray-400 font-black uppercase italic text-[10px]">Transf.</span>
             </button>
         </div>
+
         <div class="mb-6">
             <div id="container-monto">
-                <p class="text-[10px] font-black text-gray-600 uppercase mb-3 tracking-widest">Monto Recibido</p>
-                <input type="number" id="monto-recibido" oninput="calcularCambio()" class="w-full bg-black border-2 border-white/5 rounded-2xl p-5 text-4xl font-black text-white focus:border-green-500 outline-none transition text-center italic" placeholder="0.00">
+                <p class="text-[10px] font-black text-zinc-400 dark:text-gray-600 uppercase mb-3 tracking-widest">Monto Recibido</p>
+                <input type="number" id="monto-recibido" oninput="calcularCambio()" class="w-full bg-zinc-100 dark:bg-black border-2 border-zinc-100 dark:border-white/5 rounded-2xl p-5 text-4xl font-black text-zinc-900 dark:text-white focus:border-green-500 outline-none transition text-center italic" placeholder="0.00">
             </div>
             <div id="container-folio" class="hidden">
-                <p class="text-[10px] font-black text-blue-500 uppercase mb-3 tracking-widest">Folio de Operación</p>
-                <input type="text" id="folio-pago" class="w-full bg-black border-2 border-blue-500/30 rounded-2xl p-5 text-3xl font-black text-white focus:border-blue-500 outline-none transition text-center italic uppercase" placeholder="EJ. 123456">
+                <p class="text-[10px] font-black text-blue-600 dark:text-blue-500 uppercase mb-3 tracking-widest">Folio de Operación</p>
+                <input type="text" id="folio-pago" class="w-full bg-zinc-100 dark:bg-black border-2 border-blue-500/30 rounded-2xl p-5 text-3xl font-black text-zinc-900 dark:text-white focus:border-blue-500 outline-none transition text-center italic uppercase" placeholder="EJ. 123456">
             </div>
         </div>
-        <div id="atajos-dinero" class="grid grid-cols-4 gap-2 mb-8 text-xs">
-            <button onclick="sumarMonto(50)" class="bg-white/5 p-3 rounded-xl font-black text-gray-400 hover:text-white">$50</button>
-            <button onclick="sumarMonto(100)" class="bg-white/5 p-3 rounded-xl font-black text-gray-400 hover:text-white">$100</button>
-            <button onclick="sumarMonto(200)" class="bg-white/5 p-3 rounded-xl font-black text-gray-400 hover:text-white">$200</button>
-            <button onclick="sumarMonto(500)" class="bg-white/5 p-3 rounded-xl font-black text-gray-400 hover:text-white">$500</button>
+
+        <div id="atajos-dinero" class="grid grid-cols-4 gap-2 mb-8 text-xs font-black">
+            <button onclick="sumarMonto(50)" class="bg-zinc-100 dark:bg-white/5 p-3 rounded-xl text-zinc-500 dark:text-gray-400 hover:text-red-600 transition">$50</button>
+            <button onclick="sumarMonto(100)" class="bg-zinc-100 dark:bg-white/5 p-3 rounded-xl text-zinc-500 dark:text-gray-400 hover:text-red-600 transition">$100</button>
+            <button onclick="sumarMonto(200)" class="bg-zinc-100 dark:bg-white/5 p-3 rounded-xl text-zinc-500 dark:text-gray-400 hover:text-red-600 transition">$200</button>
+            <button onclick="sumarMonto(500)" class="bg-zinc-100 dark:bg-white/5 p-3 rounded-xl text-zinc-500 dark:text-gray-400 hover:text-red-600 transition">$500</button>
         </div>
+
         <div class="flex gap-3">
-            <button onclick="cerrarModalCobro()" class="flex-1 bg-white/5 text-gray-500 p-5 rounded-2xl font-black uppercase hover:bg-white/10 transition">Cancelar</button>
-            <button onclick="finalizarProcesoCobro()" class="flex-[2] bg-green-600 text-white p-5 rounded-2xl font-black uppercase shadow-lg hover:bg-green-700 transition italic">Completar Venta</button>
+            <button onclick="cerrarModalCobro()" class="flex-1 bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-gray-500 p-5 rounded-2xl font-black uppercase hover:bg-zinc-200 dark:hover:bg-white/10 transition">Cancelar</button>
+            <button onclick="finalizarProcesoCobro()" class="flex-[2] bg-green-600 text-white p-5 rounded-2xl font-black uppercase shadow-lg hover:bg-green-700 transition italic">FINALIZAR VENTA</button>
         </div>
     </div>
 </div>
 
-<div id="modalVentasEspera" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/80 backdrop-blur-sm">
+{{-- MODAL ESPERA --}}
+<div id="modalVentasEspera" class="fixed inset-0 z-50 hidden bg-zinc-900/80 backdrop-blur-sm">
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-[#0d0d0d] border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl p-6">
-            <h3 class="text-xl font-black italic text-white uppercase mb-4">Ventas en <span class="text-red-600">Espera</span></h3>
-            <div class="overflow-hidden rounded-xl border border-white/5">
+        <div class="bg-white dark:bg-[#0d0d0d] w-full max-w-2xl rounded-[2.5rem] shadow-2xl p-8 border border-zinc-200 dark:border-white/10">
+            
+            <h3 class="text-3xl font-black italic text-zinc-900 dark:text-white uppercase mb-6">
+                Ventas en <span class="text-red-600">Espera</span>
+            </h3>
+
+            <div class="bg-zinc-50 dark:bg-white/5 rounded-3xl p-2 border border-zinc-100 dark:border-white/5">
                 <table class="w-full text-left">
-                    <tbody id="listaVentasEspera" class="divide-y divide-white/5 text-white"></tbody>
+                    <tbody id="listaVentasEspera" class="divide-y divide-zinc-200 dark:divide-white/5">
+                        </tbody>
                 </table>
             </div>
-            <button onclick="cerrarModalRecuperar()" class="mt-4 w-full bg-white/5 p-3 text-gray-500 font-black uppercase">Cerrar</button>
+
+            <button onclick="cerrarModalRecuperar()" class="mt-8 w-full bg-zinc-100 dark:bg-white/10 p-6 text-zinc-500 font-black uppercase rounded-2xl hover:bg-red-600 hover:text-white transition-all text-xl italic">
+                Cerrar Ventana
+            </button>
         </div>
     </div>
 </div>
-
-<div id="modal-busqueda" class="hidden fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-    <div class="bg-[#0d0d0d] border border-red-600/50 w-full max-w-4xl rounded-2xl p-8 shadow-2xl">
+{{-- MODAL BÚSQUEDA --}}
+<div id="modal-busqueda" class="hidden fixed inset-0 bg-zinc-100/95 dark:bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-[#0d0d0d] border-2 border-red-600/50 w-full max-w-4xl rounded-2xl p-8 shadow-2xl">
         <div class="flex justify-between items-center mb-8">
-            <h3 class="text-red-600 font-black text-3xl uppercase italic">Buscador <span class="text-white">Express</span></h3>
-            <button onclick="cerrarModalBusqueda()" class="text-gray-600 font-black uppercase text-xs">CERRAR [ESC]</button>
+            <h3 class="text-red-600 font-black text-3xl uppercase italic">Buscador <span class="text-zinc-900 dark:text-white">Express</span></h3>
+            <button onclick="cerrarModalBusqueda()" class="text-zinc-400 dark:text-gray-600 font-black uppercase text-xs hover:text-red-600">CERRAR [ESC]</button>
         </div>
-        <input type="text" id="input-busqueda-nombre" class="w-full bg-black border border-white/10 text-white text-4xl p-6 rounded-xl focus:border-red-600 outline-none uppercase font-black italic mb-6" placeholder="ESCRIBE NOMBRE...">
+        <input type="text" id="input-busqueda-nombre" class="w-full bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-4xl p-6 rounded-xl focus:border-red-600 outline-none uppercase font-black italic mb-6" placeholder="ESCRIBE NOMBRE...">
         <div class="max-h-[400px] overflow-y-auto custom-scrollbar">
             <table class="w-full text-left">
-                <tbody id="resultados-busqueda" class="divide-y divide-white/5 text-white"></tbody>
+                <tbody id="resultados-busqueda" class="divide-y divide-zinc-100 dark:divide-white/5 text-zinc-900 dark:text-white"></tbody>
             </table>
         </div>
     </div>
 </div>
 
-<div id="modal-peso" class="hidden fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[120] p-4">
-    <div class="bg-[#111] border border-white/10 w-full max-w-md rounded-3xl p-8 text-center">
-        <h2 id="peso-producto-nombre" class="text-xl font-black text-white uppercase italic mb-6">Producto</h2>
-        <input type="number" id="input-peso-valor" step="0.001" class="w-full bg-black border-2 border-white/5 rounded-2xl p-6 text-6xl font-black text-green-500 text-center italic mb-6" placeholder="0.000">
+{{-- MODAL PESO --}}
+<div id="modal-peso" class="hidden fixed inset-0 bg-zinc-900/95 dark:bg-black/95 backdrop-blur-md flex items-center justify-center z-[120] p-4">
+    <div class="bg-white dark:bg-[#111] border border-zinc-200 dark:border-white/10 w-full max-w-md rounded-3xl p-8 text-center shadow-2xl">
+        <h2 id="peso-producto-nombre" class="text-xl font-black text-zinc-900 dark:text-white uppercase italic mb-6">Producto</h2>
+        <input type="number" id="input-peso-valor" step="0.001" class="w-full bg-zinc-100 dark:bg-black border-2 border-zinc-100 dark:border-white/5 rounded-2xl p-6 text-6xl font-black text-green-600 dark:text-green-500 text-center italic mb-6 outline-none focus:border-red-600" placeholder="0.000">
         <div class="flex gap-3">
-            <button onclick="confirmarPeso()" class="flex-[2] bg-red-600 text-white p-5 rounded-2xl font-black uppercase italic">Confirmar</button>
+            <button onclick="confirmarPeso()" class="flex-[2] bg-red-600 text-white p-5 rounded-2xl font-black uppercase italic shadow-lg hover:bg-red-700 transition">Confirmar</button>
         </div>
     </div>
 </div>
@@ -215,6 +285,7 @@ let totalVenta = 0;
 let metodoSeleccionado = 'efectivo';
 let productoPendientePeso = null;
 let productoProvSeleccionado = null; 
+let listaTemporalProveedor = []; // <--- Lista para entradas de mercancía
 
 // Notificaciones
 const notify = (icon, title) => {
@@ -231,16 +302,15 @@ const notify = (icon, title) => {
 };
 
 // ==========================================
-// NUEVA LÓGICA: RESPALDO LOCAL DE PRODUCTOS
+// RESPALDO LOCAL Y SINCRONIZACIÓN (OFFLINE)
 // ==========================================
-// Esto guarda una copia de tus productos para que el buscador funcione sin internet
 async function actualizarRespaldoProductos() {
     if (!navigator.onLine) return;
     try {
-        const res = await fetch("{{ url('/ventas/buscar-nombre') }}?q="); // O una ruta que traiga tus productos
+        const res = await fetch("{{ url('/ventas/buscar-nombre') }}?q="); 
         const productos = await res.json();
         localStorage.setItem('respaldo_productos', JSON.stringify(productos));
-    } catch (e) { console.log("Esperando conexión para respaldar productos..."); }
+    } catch (e) { console.log("Esperando conexión..."); }
 }
 
 function buscarLocal(query) {
@@ -251,15 +321,9 @@ function buscarLocal(query) {
     ).slice(0, 10);
 }
 
-// ==========================================
-// SINCRONIZACIÓN OFFLINE
-// ==========================================
 async function sincronizarVentasPendientes() {
     let ventas = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
     if (ventas.length === 0) return;
-
-    console.log("Intentando sincronizar " + ventas.length + " ventas pendientes...");
-
     for (let i = 0; i < ventas.length; i++) {
         try {
             const res = await fetch("{{ route('ventas.finalizar') }}", {
@@ -267,14 +331,9 @@ async function sincronizarVentasPendientes() {
                 headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
                 body: JSON.stringify(ventas[i])
             });
-            
-            if (res.ok) {
-                ventas.splice(i, 1);
-                i--; 
-            }
+            if (res.ok) { ventas.splice(i, 1); i--; }
         } catch (e) { break; }
     }
-
     localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(ventas));
     if (ventas.length === 0) { notify('success', 'VENTAS SINCRONIZADAS'); }
 }
@@ -282,12 +341,13 @@ async function sincronizarVentasPendientes() {
 window.addEventListener('online', () => { sincronizarVentasPendientes(); actualizarRespaldoProductos(); });
 document.addEventListener('DOMContentLoaded', () => { sincronizarVentasPendientes(); actualizarRespaldoProductos(); });
 
-// 1. ESCÁNER Y BÚSQUEDA (MEJORADO OFFLINE)
+// ==========================================
+// 1. ESCÁNER Y BÚSQUEDA DE VENTAS
+// ==========================================
 document.getElementById('scanner').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
         let codigo = this.value; if (!codigo) return;
-        
         if (!navigator.onLine) {
             const p = buscarLocal(codigo)[0];
             if (p) { agregarAlCarrito(p); this.value = ""; } 
@@ -308,7 +368,6 @@ document.getElementById('scanner').addEventListener('keypress', function(e) {
 
 document.getElementById('input-busqueda-nombre').addEventListener('input', function() {
     let q = this.value; if (q.length < 2) return;
-    
     const render = (productos) => {
         let html = "";
         productos.forEach(p => {
@@ -319,15 +378,8 @@ document.getElementById('input-busqueda-nombre').addEventListener('input', funct
         });
         document.getElementById('resultados-busqueda').innerHTML = html;
     };
-
-    if (!navigator.onLine) {
-        render(buscarLocal(q));
-    } else {
-        fetch(`{{ url('/ventas/buscar-nombre') }}?q=${q}`)
-            .then(res => res.json())
-            .then(productos => render(productos))
-            .catch(() => render(buscarLocal(q)));
-    }
+    if (!navigator.onLine) render(buscarLocal(q));
+    else fetch(`{{ url('/ventas/buscar-nombre') }}?q=${q}`).then(res => res.json()).then(productos => render(productos)).catch(() => render(buscarLocal(q)));
 });
 
 function seleccionarProductoVenta(data) {
@@ -335,11 +387,12 @@ function seleccionarProductoVenta(data) {
     cerrarModalBusqueda();
 }
 
-// 2. LÓGICA DE PROVEEDORES (MEJORADO OFFLINE)
+// ==========================================
+// 2. LÓGICA DE PROVEEDORES (NUEVA MULTIPRODUCTO)
+// ==========================================
 function buscarProductoNombreProveedor(query) {
     const contenedor = document.getElementById('sugerencias-prov');
     if (query.length < 2) { contenedor.classList.add('hidden'); return; }
-
     const renderProv = (productos) => {
         let html = "";
         productos.forEach(p => {
@@ -350,15 +403,8 @@ function buscarProductoNombreProveedor(query) {
         });
         contenedor.innerHTML = html; contenedor.classList.remove('hidden');
     };
-
-    if (!navigator.onLine) {
-        renderProv(buscarLocal(query));
-    } else {
-        fetch(`{{ url('/ventas/buscar-nombre') }}?q=${query}`)
-            .then(res => res.json())
-            .then(productos => renderProv(productos))
-            .catch(() => renderProv(buscarLocal(query)));
-    }
+    if (!navigator.onLine) renderProv(buscarLocal(query));
+    else fetch(`{{ url('/ventas/buscar-nombre') }}?q=${query}`).then(res => res.json()).then(productos => renderProv(productos)).catch(() => renderProv(buscarLocal(query)));
 }
 
 function seleccionarProductoProv(dataBase64) {
@@ -371,26 +417,66 @@ function seleccionarProductoProv(dataBase64) {
     document.getElementById('prov-cantidad').focus();
 }
 
-function guardarEntradaStock() {
+function agregarAListaTemporalProv() {
     const cant = parseFloat(document.getElementById('prov-cantidad').value);
-    const proveedor = document.getElementById('prov-nombre').value.trim();
     const costo = parseFloat(document.getElementById('prov-costo-total').value) || 0;
-    const metodo = document.getElementById('prov-metodo').value;
-
-    if (!productoProvSeleccionado || isNaN(cant) || cant <= 0 || !proveedor) {
-        notify('warning', 'RELLENA LOS DATOS CORRECTAMENTE'); return;
+    
+    if (!productoProvSeleccionado || isNaN(cant) || cant <= 0) {
+        notify('warning', 'DATOS INVÁLIDOS'); return;
     }
 
-    const payload = { producto_id: productoProvSeleccionado.id, cantidad: cant, costo_total: costo, proveedor: proveedor, metodo_pago: metodo };
+    listaTemporalProveedor.push({
+        id: productoProvSeleccionado.id,
+        descripcion: productoProvSeleccionado.descripcion,
+        cantidad: cant,
+        costo_unitario: costo,
+        subtotal: cant * costo,
+        unidad: productoProvSeleccionado.unidad_medida
+    });
+
+    renderListaProv();
+    productoProvSeleccionado = null;
+    document.getElementById('info-producto-prov').classList.add('hidden');
+    document.getElementById('busqueda-prod-prov').focus();
+}
+
+function renderListaProv() {
+    const tbody = document.getElementById('lista-items-prov');
+    tbody.innerHTML = "";
+    listaTemporalProveedor.forEach((item, index) => {
+        tbody.innerHTML += `
+            <tr class="border-b border-white/5">
+                <td class="p-4 font-black">${item.cantidad}</td>
+                <td class="p-4 uppercase italic text-zinc-400">${item.descripcion}</td>
+                <td class="p-4 text-right">$${item.costo_unitario.toFixed(2)}</td>
+                <td class="p-4 text-right text-green-500 font-black">$${item.subtotal.toFixed(2)}</td>
+                <td class="p-4 text-center">
+                    <button onclick="eliminarItemProv(${index})" class="text-zinc-600 hover:text-red-600">&times;</button>
+                </td>
+            </tr>`;
+    });
+    document.getElementById('contador-items-prov').innerText = `${listaTemporalProveedor.length} ARTÍCULOS`;
+}
+
+function eliminarItemProv(i) {
+    listaTemporalProveedor.splice(i, 1);
+    renderListaProv();
+}
+
+function guardarEntradaStock() {
+    const proveedor = document.getElementById('prov-nombre').value.trim();
+    if (listaTemporalProveedor.length === 0 || !proveedor) {
+        notify('warning', 'PROVEEDOR O LISTA VACÍA'); return;
+    }
+
+    const payload = { proveedor: proveedor, productos: listaTemporalProveedor };
 
     if (!navigator.onLine) {
-        // Guardamos entradas de stock offline también si quieres
-        let colaStock = JSON.parse(localStorage.getItem('cola_stock_offline')) || [];
-        colaStock.push(payload);
-        localStorage.setItem('cola_stock_offline', JSON.stringify(colaStock));
+        let cola = JSON.parse(localStorage.getItem('cola_stock_offline')) || [];
+        cola.push(payload);
+        localStorage.setItem('cola_stock_offline', JSON.stringify(cola));
         notify('warning', 'STOCK GUARDADO OFFLINE');
-        abrirCajonManual();
-        setTimeout(() => location.reload(), 1500);
+        limpiarYSalirProv();
         return;
     }
 
@@ -402,14 +488,23 @@ function guardarEntradaStock() {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            abrirCajonManual();
             notify('success', 'MERCANCÍA REGISTRADA');
+            limpiarYSalirProv();
             setTimeout(() => location.reload(), 1500);
         }
     });
 }
 
-// 3. CARRITO Y TABLA
+function limpiarYSalirProv() {
+    listaTemporalProveedor = [];
+    document.getElementById('prov-nombre').value = "";
+    renderListaProv();
+    cerrarModalProveedor();
+}
+
+// ==========================================
+// 3. CARRITO Y TABLA DE VENTAS
+// ==========================================
 function agregarAlCarrito(producto) {
     if (producto.unidad_medida === 'kg' || producto.unidad_medida === 'granel') {
         productoPendientePeso = producto;
@@ -451,7 +546,9 @@ function renderizarTabla() {
 
 function eliminarItem(i) { carrito.splice(i, 1); renderizarTabla(); }
 
+// ==========================================
 // 4. LÓGICA DE COBRO
+// ==========================================
 function cobrar() {
     if (carrito.length === 0) { notify('info', 'Carrito vacío'); return; }
     document.getElementById('resumen-articulos').innerText = carrito.length;
@@ -463,7 +560,6 @@ function cobrar() {
 function setMetodo(t) {
     metodoSeleccionado = t;
     const btnE = document.getElementById('btn-efectivo'), btnT = document.getElementById('btn-tarjeta'), btnTr = document.getElementById('btn-transferencia');
-    const montoInput = document.getElementById('monto-recibido');
     [btnE, btnT, btnTr].forEach(b => { if (b) b.className = "border-2 border-white/5 bg-white/5 p-4 rounded-2xl flex flex-col items-center transition text-white opacity-50"; });
     const btnSel = document.getElementById(`btn-${t}`);
     if (btnSel) {
@@ -474,7 +570,7 @@ function setMetodo(t) {
         document.getElementById('container-monto').classList.remove('hidden');
         document.getElementById('container-folio').classList.add('hidden');
         document.getElementById('atajos-dinero').classList.remove('hidden');
-        setTimeout(() => montoInput.focus(), 200);
+        setTimeout(() => document.getElementById('monto-recibido').focus(), 200);
     } else {
         document.getElementById('container-monto').classList.add('hidden');
         document.getElementById('container-folio').classList.remove('hidden');
@@ -511,25 +607,20 @@ function finalizarProcesoCobro() {
         let cola = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
         cola.push(payloadVenta);
         localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(cola));
-        abrirCajonManual(); 
-        notify('warning', 'VENTA GUARDADA OFFLINE');
-        ejecutarLimpiezaPostVenta();
-        return;
+        abrirCajonManual(); notify('warning', 'VENTA GUARDADA OFFLINE');
+        ejecutarLimpiezaPostVenta(); return;
     }
 
     fetch("{{ route('ventas.finalizar') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
         body: JSON.stringify(payloadVenta)
-    })
-    .then(res => res.json())
-    .then(data => {
+    }).then(res => res.json()).then(data => {
         if(data.status === 'success') {
             window.open(`/ventas/ticket/${data.venta_id}`, "Ticket", "width=400,height=600");
             ejecutarLimpiezaPostVenta();
         }
-    })
-    .catch(() => {
+    }).catch(() => {
         let cola = JSON.parse(localStorage.getItem('cola_ventas_abarrotes')) || [];
         cola.push(payloadVenta); localStorage.setItem('cola_ventas_abarrotes', JSON.stringify(cola));
         abrirCajonManual(); ejecutarLimpiezaPostVenta();
@@ -538,27 +629,17 @@ function finalizarProcesoCobro() {
 
 function ejecutarLimpiezaPostVenta() {
     carrito = []; renderizarTabla(); cerrarModalCobro();
-    if(document.getElementById('scanner')) document.getElementById('scanner').focus();
+    document.getElementById('scanner').focus();
 }
 
-// 5. PAUSA Y RECUPERACIÓN (F2 y F4 - MEJORADO OFFLINE)
+// ==========================================
+// 5. PAUSA Y RECUPERACIÓN (F2 y F4)
+// ==========================================
 async function pausarVenta() {
     if (carrito.length === 0) return;
-    
-    // Lo guardamos en localStorage para que funcione siempre
     let pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
     pausadas.push({ id: Date.now(), fecha: new Date(), productos: carrito });
     localStorage.setItem('ventas_pausadas_local', JSON.stringify(pausadas));
-
-    // Intentamos avisar al servidor pero si no hay red no importa
-    if (navigator.onLine) {
-        fetch("{{ route('ventas.pausar') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
-            body: JSON.stringify({ productos: carrito })
-        });
-    }
-
     notify('success', 'EN ESPERA (LOCAL)');
     carrito = []; renderizarTabla();
 }
@@ -567,50 +648,33 @@ function abrirModalRecuperar() {
     document.getElementById('modalVentasEspera').classList.remove('hidden');
     const tbody = document.getElementById('listaVentasEspera');
     tbody.innerHTML = '';
-
-    // Priorizamos las ventas guardadas localmente
     const pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
     pausadas.forEach(v => {
         tbody.innerHTML += `<tr><td class="p-4 text-white">${new Date(v.fecha).toLocaleString()} (Local)</td>
         <td class="p-4 text-right"><button onclick="recuperarLocal(${v.id})" class="bg-green-600 text-white px-4 py-2 rounded">Seleccionar</button></td></tr>`;
     });
-
-    // Si hay red, buscamos las del servidor también
-    if (navigator.onLine) {
-        fetch('/admin/ventas-espera/listar').then(res => res.json()).then(data => {
-            data.forEach(v => {
-                tbody.innerHTML += `<tr><td class="p-4 text-white">${new Date(v.fecha_pausa).toLocaleString()} (Nube)</td>
-                <td class="p-4 text-right"><button onclick="recuperar(${v.id})" class="bg-blue-600 text-white px-4 py-2 rounded">Seleccionar</button></td></tr>`;
-            });
-        });
-    }
 }
 
 function recuperarLocal(id) {
     let pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
     const venta = pausadas.find(v => v.id === id);
     if (venta) {
-        carrito = venta.productos;
-        renderizarTabla();
+        carrito = venta.productos; renderizarTabla();
         localStorage.setItem('ventas_pausadas_local', JSON.stringify(pausadas.filter(v => v.id !== id)));
         cerrarModalRecuperar();
     }
 }
 
-async function recuperar(id) {
-    const res = await fetch(`/admin/ventas-espera/recuperar/${id}`);
-    const data = await res.json();
-    if (data.status === 'success') { carrito = data.carrito; renderizarTabla(); cerrarModalRecuperar(); }
-}
-
+// ==========================================
 // 6. CONTROL MODALES Y CAJÓN
+// ==========================================
 function abrirCajonManual() {
     const win = window.open("{{ route('impresion.abrir-cajon') }}", '_blank', 'width=1,height=1');
     if(win) setTimeout(() => win.close(), 500);
 }
 
 function abrirModalProveedor() { document.getElementById('modal-proveedor').classList.remove('hidden'); setTimeout(() => document.getElementById('busqueda-prod-prov').focus(), 200); }
-function cerrarModalProveedor() { document.getElementById('modal-proveedor').classList.add('hidden'); productoProvSeleccionado = null; }
+function cerrarModalProveedor() { document.getElementById('modal-proveedor').classList.add('hidden'); }
 function abrirModalBusqueda() { document.getElementById('modal-busqueda').classList.remove('hidden'); document.getElementById('input-busqueda-nombre').focus(); }
 function cerrarModalBusqueda() { document.getElementById('modal-busqueda').classList.add('hidden'); }
 function cerrarModalPeso() { document.getElementById('modal-peso').classList.add('hidden'); }

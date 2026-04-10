@@ -12,14 +12,12 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Creamos tu usuario administrador de pruebas principal
         Usuario::factory()->create([
-            'nombre' => 'Josue Lazaro',
+            'nombre' => 'administrador',
             'username' => 'admin',
             'password_hash' => Hash::make('admin123'),
             'rol' => 'administrador',
             'activo' => true,
         ]);
 
-        // 2. Generamos 5 usuarios aleatorios adicionales (cajeros o supervisores)
-        Usuario::factory(5)->create();
     }
 }

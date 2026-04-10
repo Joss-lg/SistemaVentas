@@ -3,115 +3,105 @@
 @section('title', 'Panel de Control')
 
 @section('content')
-<div class="space-y-8">
-    {{-- Encabezado --}}
-    <div class="flex items-center justify-between border-b border-white/5 pb-6">
+{{-- Nota: Para que los iconos funcionen, asegúrate de tener FontAwesome en tu layout --}}
+
+<div class="max-w-[1600px] mx-auto space-y-10">
+    
+    {{-- Encabezado del Panel --}}
+    <div class="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-6">
         <div>
-            <h2 class="text-4xl font-black italic tracking-tighter uppercase text-white">
-                Resumen <span class="text-red-600">General</span>
+            <h2 class="text-4xl font-black italic tracking-tighter uppercase text-zinc-900 dark:text-white leading-none">
+                RESUMEN <span class="text-red-600">GENERAL</span>
             </h2>
-            <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mt-1">
-                Bienvenido, {{ Auth::user()->username }}
+            <p class="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.4em] mt-2 italic">
+                SISTEMA GESTIÓN ABARROTES - CONTROL DE OPERACIONES
             </p>
         </div>
-        <div class="text-right">
-            <span class="block text-[10px] font-black text-zinc-600 uppercase tracking-widest">Estado del Sistema</span>
-            <span class="inline-flex items-center gap-2 text-green-500 font-bold italic text-sm">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Online
+        <div class="bg-zinc-100 dark:bg-white/5 px-4 py-2 rounded-lg border border-zinc-200 dark:border-white/5">
+            <span class="text-green-500 font-black italic text-xs flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> ESTADO: ONLINE
             </span>
         </div>
     </div>
 
-    {{-- Tarjetas de Estadísticas --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-[#0d0d0d] border border-white/5 p-8 rounded-2xl relative overflow-hidden group hover:border-red-600/30 transition-all shadow-2xl">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-cash-register text-6xl text-red-600"></i>
+    {{-- Grid de Indicadores Principales --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
+        
+        {{-- Indicador: Ventas del Día --}}
+        <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 border-b-8 border-b-red-600 p-8 rounded-t-3xl rounded-b-md shadow-xl hover:shadow-2xl transition-all group overflow-hidden relative flex items-center min-h-[190px]">
+            <div class="relative z-10 w-full">
+                <p class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 italic">Ventas de Hoy</p>
+                <h3 class="text-6xl font-black italic text-zinc-900 dark:text-white tracking-tighter">
+                    ${{ number_format($ventasHoy, 2) }}
+                </h3>
             </div>
-            <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Ventas Hoy (Completadas)</p>
-            <h3 class="text-5xl font-black italic text-white tracking-tighter">
-                ${{ number_format($ventasHoy, 2) }}
-            </h3>
-            <div class="mt-4 h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-                <div class="h-full bg-red-600 w-2/3"></div>
-            </div>
+            <i class="fas fa-chart-line absolute -right-2 -bottom-4 text-9xl text-zinc-900 dark:text-white opacity-[0.05] group-hover:opacity-10 transition-all duration-500"></i>
         </div>
 
-        <div class="bg-[#0d0d0d] border border-white/5 p-8 rounded-2xl relative overflow-hidden group hover:border-blue-600/30 transition-all shadow-2xl">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-shopping-cart text-6xl text-blue-600"></i>
+        {{-- Indicador: Volumen de Transacciones --}}
+        <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 border-b-8 border-b-blue-600 p-8 rounded-t-3xl rounded-b-md shadow-xl hover:shadow-2xl transition-all group overflow-hidden relative flex items-center min-h-[190px]">
+            <div class="relative z-10 w-full">
+                <p class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 italic">Ventas Realizadas</p>
+                <h3 class="text-6xl font-black italic text-zinc-900 dark:text-white tracking-tighter">
+                    {{ $numVentas }}
+                </h3>
             </div>
-            <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Número de Ventas</p>
-            <h3 class="text-5xl font-black italic text-white tracking-tighter">
-                {{ $numVentas }}
-            </h3>
-            <div class="mt-4 h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-                <div class="h-full bg-blue-600 w-1/2"></div>
-            </div>
+            <i class="fas fa-tag absolute -right-2 -bottom-4 text-9xl text-zinc-900 dark:text-white opacity-[0.05] group-hover:opacity-10 transition-all duration-500"></i>
         </div>
 
-        <div class="bg-[#0d0d0d] border border-white/5 p-8 rounded-2xl relative overflow-hidden group hover:border-orange-600/30 transition-all shadow-2xl">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-exclamation-triangle text-6xl text-orange-600"></i>
+        {{-- Indicador: Inventario Crítico --}}
+        <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 border-b-8 border-b-orange-600 p-8 rounded-t-3xl rounded-b-md shadow-xl hover:shadow-2xl transition-all group overflow-hidden relative flex items-center min-h-[190px]">
+            <div class="relative z-10 w-full">
+                <p class="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 italic">Stock Crítico</p>
+                <h3 class="text-6xl font-black italic text-orange-600 tracking-tighter">
+                    {{ $productosBajoStock }}
+                </h3>
             </div>
-            <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Productos Bajo Stock</p>
-            <h3 class="text-5xl font-black italic text-orange-600 tracking-tighter">
-                {{ $productosBajoStock }}
-            </h3>
-            <div class="mt-4 h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-                <div class="h-full bg-orange-600 w-1/4"></div>
-            </div>
+            <i class="fas fa-box-open absolute -right-2 -bottom-4 text-9xl text-zinc-900 dark:text-white opacity-[0.05] group-hover:opacity-10 transition-all duration-500"></i>
         </div>
+
     </div>
 
-    {{-- NUEVA SECCIÓN: Últimos Cortes de Caja --}}
-    <div class="bg-[#0d0d0d] border border-white/5 rounded-2xl shadow-2xl overflow-hidden">
-        <div class="p-6 border-b border-white/5 flex justify-between items-center">
-            <h3 class="text-xl font-black italic text-white uppercase tracking-tighter">
-                Últimos <span class="text-red-600">Cortes de Caja</span>
+    {{-- Sección de Auditoría: Cortes de Caja --}}
+    <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 rounded-3xl shadow-2xl overflow-hidden mt-6">
+        <div class="px-10 py-8 border-b border-zinc-100 dark:border-white/5 flex justify-between items-center bg-zinc-50/50 dark:bg-white/[0.02]">
+            <h3 class="text-xl font-black italic text-zinc-900 dark:text-white uppercase tracking-tighter leading-none">
+                ÚLTIMOS <span class="text-red-600">CORTES DE CAJA</span>
             </h3>
-            <i class="fas fa-history text-zinc-600"></i>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
+        
+        <div class="overflow-x-auto px-6 pb-6 mt-4">
+            <table class="w-full text-left border-separate border-spacing-y-3">
                 <thead>
-                    <tr class="bg-zinc-900/50">
-                        <th class="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Fecha</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cajero</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Esperado</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Contado</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Diferencia</th>
+                    <tr class="text-zinc-400 dark:text-zinc-500 font-black uppercase italic text-[10px] tracking-widest px-6">
+                        <th class="px-6 py-2">Fecha de Cierre</th>
+                        <th class="px-6 py-2">Responsable</th>
+                        <th class="px-6 py-2">Contado Real</th>
+                        <th class="px-6 py-2 text-right">Diferencia</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-white/5">
+                <tbody class="text-sm">
                     @forelse($ultimosCortes as $corte)
-                    <tr class="hover:bg-white/[0.02] transition-colors">
-                        <td class="px-6 py-4 text-sm text-zinc-400 font-medium">
+                    <tr class="bg-zinc-50 dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-all rounded-2xl">
+                        <td class="px-6 py-5 font-mono text-zinc-500 rounded-l-2xl border-l border-y border-zinc-200/50 dark:border-transparent">
                             {{ \Carbon\Carbon::parse($corte->fecha_cierre)->format('d/m/Y H:i') }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-white font-bold italic">
-                            {{ $corte->usuario->username ?? 'Cajero' }}
+                        <td class="px-6 py-5 font-black italic text-zinc-800 dark:text-white uppercase">
+                            {{ $corte->usuario->username ?? 'SISTEMA' }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-zinc-400">
-                            ${{ number_format($corte->total_esperado, 2) }}
-                        </td>
-                        <td class="px-6 py-4 text-sm text-white">
+                        <td class="px-6 py-5 font-bold text-zinc-900 dark:text-white">
                             ${{ number_format($corte->total_contado, 2) }}
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-black italic uppercase {{ $corte->difference < 0 ? 'bg-red-600/10 text-red-500' : 'bg-green-600/10 text-green-500' }}">
+                        <td class="px-6 py-5 text-right rounded-r-2xl border-r border-y border-zinc-200/50 dark:border-transparent">
+                            <span class="inline-block px-4 py-1.5 rounded-lg text-[10px] font-black italic uppercase {{ $corte->difference < 0 ? 'bg-red-600/10 text-red-500' : 'bg-green-600/10 text-green-500' }}">
                                 ${{ number_format($corte->difference, 2) }}
                             </span>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-10 text-center text-zinc-600 italic text-sm">
-                            No hay registros de cortes recientes en el sistema.
+                        <td colspan="4" class="p-10 text-center text-zinc-400 uppercase italic font-black">
+                            No se encontraron registros de cortes recientes.
                         </td>
                     </tr>
                     @endforelse

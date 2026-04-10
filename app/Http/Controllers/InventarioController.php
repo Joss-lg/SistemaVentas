@@ -10,53 +10,56 @@ use Illuminate\Support\Facades\Log;
 
 class InventarioController extends Controller
 {
-    /**
-     * Registra la entrada de mercancía y genera un gasto automático.
-     */
     public function agregarStock(Request $request)
     {
-        // 1. Validar los datos de entrada
+        // 1. Validamos que venga el proveedor y la lista de productos
         $request->validate([
-            'producto_id' => 'required|exists:productos,id',
-            'cantidad'    => 'required|numeric|min:0.001',
-            'costo_total' => 'required|numeric|min:0',
-            'proveedor'   => 'required|string|max:255'
+            'proveedor' => 'required|string|max:255',
+            'productos' => 'required|array|min:1',
+            'productos.*.id' => 'required|exists:productos,id',
+            'productos.*.cantidad' => 'required|numeric|min:0.001',
+            'productos.*.costo_unitario' => 'required|numeric|min:0'
         ]);
 
         try {
             return DB::transaction(function () use ($request) {
-                
-                $producto = Producto::findOrFail($request->producto_id);
+                $totalCompraEntrada = 0;
+                $detallesGasto = "";
 
-                // 2. Registrar la Compra (Historial de Inventario)
-                $compra = Compra::create([
-                    'producto_id' => $request->producto_id,
-                    'proveedor'   => strtoupper($request->proveedor), 
-                    'cantidad'    => $request->cantidad,
-                    'costo_total' => $request->costo_total,
-                    'metodo_pago' => $request->metodo_pago ?? 'efectivo', 
-                ]);
+                foreach ($request->productos as $p) {
+                    $producto = Producto::findOrFail($p['id']);
+                    $subtotal = $p['cantidad'] * $p['costo_unitario'];
+                    $totalCompraEntrada += $subtotal;
 
-                // 3. REGISTRO EN TABLA DE GASTOS (Flujo de Caja)
-                // Usamos Query Builder para insertar directo en la tabla de gastos
+                    // 2. Registrar cada producto en el historial de Compras
+                    Compra::create([
+                        'producto_id' => $p['id'],
+                        'proveedor'   => strtoupper($request->proveedor), 
+                        'cantidad'    => $p['cantidad'],
+                        'costo_total' => $subtotal,
+                        'metodo_pago' => $request->metodo_pago ?? 'efectivo', 
+                    ]);
+
+                    // 3. Actualizar el stock de cada producto
+                    $producto->increment('stock_actual', $p['cantidad']);
+                    
+                    // Concatenamos para la descripción del gasto
+                    $detallesGasto .= $producto->descripcion . " (" . $p['cantidad'] . "), ";
+                }
+
+                // 4. REGISTRO ÚNICO EN TABLA DE GASTOS por toda la entrada
                 DB::table('gastos')->insert([
-                    'descripcion' => "COMPRA: " . $producto->descripcion . " (PROV: " . strtoupper($request->proveedor) . ")",
-                    'monto'       => $request->costo_total,
+                    'descripcion' => "COMPRA MULT. PROV: " . strtoupper($request->proveedor) . " - PRODS: " . substr($detallesGasto, 0, 150),
+                    'monto'       => $totalCompraEntrada,
                     'categoria'   => 'INVENTARIO',
-                    'usuario'     => auth()->user()->name ?? 'Admin', // Por si tienes login
+                    'usuario'     => auth()->user()->name ?? 'Admin',
                     'created_at'  => now(),
                     'updated_at'  => now(),
                 ]);
 
-                // 4. Actualizar el stock
-                $producto->increment('stock_actual', $request->cantidad);
-
                 return response()->json([
-                    'status'      => 'success',
-                    'mensaje'     => 'Stock actualizado y Gasto registrado: ' . $producto->descripcion,
-                    'nuevo_stock' => $producto->stock_actual,
-                    'compra_id'   => $compra->id,
-                    'proveedor'   => $compra->proveedor
+                    'status'  => 'success',
+                    'mensaje' => 'Entrada registrada y stock actualizado chido'
                 ]);
             });
 
@@ -64,7 +67,7 @@ class InventarioController extends Controller
             Log::error("Error en agregarStock: " . $e->getMessage());
             return response()->json([
                 'status'  => 'error',
-                'mensaje' => 'Error técnico: ' . $e->getMessage()
+                'mensaje' => 'Valió madres: ' . $e->getMessage()
             ], 500);
         }
     }

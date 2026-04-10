@@ -1,11 +1,66 @@
-@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+@layer base {
+  body {
+    @apply transition-colors duration-300 antialiased;
+    @apply bg-white text-zinc-950; /* Forzamos negro casi puro en modo luz */
+  }
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+  .dark body {
+    @apply bg-black text-zinc-100;
+  }
+
+  /* Mata el borde negro de todos los inputs del sistema de una vez */
+  input:focus, button:focus {
+    outline: none !important;
+    @apply ring-0;
+  }
+}
+
+@layer components {
+  /* Clase Maestra para que el texto sea visible y pesado en modo claro */
+  .texto-pro {
+    @apply font-black uppercase italic text-zinc-950 dark:text-white transition-colors;
+  }
+
+  /* Los inputs de tus modales para que no se vean grises */
+  .input-f1 {
+    @apply bg-zinc-100 dark:bg-white/5 border-none rounded-2xl p-6 font-black uppercase italic 
+           text-zinc-900 dark:text-white focus:ring-4 focus:ring-red-500/20 shadow-sm transition-all;
+  }
+
+  .btn-f1 {
+    @apply bg-red-600 text-white font-black italic px-4 py-2 rounded-xl hover:bg-red-700 transition-all active:scale-95;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar personalizado */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-zinc-100 dark:bg-zinc-900;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-red-600 rounded-full;
+  }
+
+  /* Sugerencias de búsqueda: Fondo blanco, texto negro y grande */
+  .sugerencia-item {
+    @apply bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white p-6 mb-2 rounded-2xl 
+           font-black uppercase italic text-xl border border-zinc-100 dark:border-white/5 
+           shadow-sm transition-all cursor-pointer;
+  }
+
+  .sugerencia-item:hover {
+    @apply bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800;
+  }
+
+  /* Forzar visibilidad en los modales de espera */
+  .item-espera {
+    @apply text-zinc-950 dark:text-white font-black text-2xl italic tracking-tighter;
+  }
 }
