@@ -15,7 +15,7 @@
         }
     </script>
 
-    {{-- Cargamos SweetAlert y los recursos de Vite (ESTO NO SE QUITA, PERDÓN WEY) --}}
+    {{-- Cargamos SweetAlert y los recursos de Vite --}}
     <script src="{{ asset('js/sweetalert2.js') }}"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -49,6 +49,9 @@
         
         /* Ajuste para el punto del switch */
         .translate-x-full-custom { transform: translateX(1.375rem); }
+
+        /* Matar bordes y rings de enfoque */
+        input:focus, button:focus, a:focus { outline: none !important; border: none !important; ring: 0 !important; --tw-ring-shadow: none !important; }
     </style>
 </head>
 <body class="bg-zinc-100 dark:bg-black text-zinc-900 dark:text-white flex min-h-screen transition-colors duration-300">
@@ -68,7 +71,7 @@
                 $base = "flex items-center space-x-4 p-5 rounded-xl font-black italic uppercase text-sm tracking-wide transition-all";
             @endphp
 
-            <p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 ml-2">Menú Principal</p>
+            <p class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4 ml-2 border-b border-zinc-100 dark:border-white/5 pb-2">Menú Principal</p>
 
             <a href="{{ route('ventas.index') }}" class="{{ $base }} {{ request()->routeIs('ventas.index') ? $active : $inactive }}">
                 <i class="fas fa-cash-register text-lg"></i>
@@ -84,6 +87,17 @@
                 <i class="fas fa-file-invoice-dollar text-lg"></i>
                 <span>Corte de Caja</span>
             </a>
+
+            {{-- PANEL DEL ADMIN: Usamos la función esAdmin() del modelo para que coincida con tu Middleware --}}
+            @if(Auth::check() && Auth::user()->esAdmin())
+                <div class="pt-6 mt-6 border-t-2 border-zinc-100 dark:border-white/5">
+                    <p class="text-[10px] font-black text-red-600 uppercase tracking-[0.3em] mb-4 ml-2">Administración</p>
+                    <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-4 p-5 rounded-2xl font-black italic uppercase text-sm tracking-wide transition-all bg-zinc-950 dark:bg-white text-white dark:text-black shadow-xl hover:bg-red-600 dark:hover:bg-red-600 dark:hover:text-white group">
+                        <i class="fas fa-user-shield text-lg group-hover:rotate-12 transition-transform"></i>
+                        <span>Panel del Admin</span>
+                    </a>
+                </div>
+            @endif
 
             <div class="pt-6">
                 <div class="p-5 bg-zinc-100 dark:bg-[#1a1a1a] border-l-4 border-red-600 rounded-r-xl">
@@ -149,6 +163,7 @@
             });
         });
 
+        // ATAJO F1
         window.addEventListener('keydown', function(e) {
             if (e.key === 'F1') {
                 e.preventDefault();
@@ -156,10 +171,11 @@
             }
         });
 
+        // SERVICE WORKER
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('%c🚀 ¡TODO AL CHINGO! El cajero está blindado.', 'color: #dc2626; font-weight: 900;'))
+                    .then(reg => console.log('%c🚀 ¡TODO AL CHINGO!', 'color: #dc2626; font-weight: 900;'))
                     .catch(err => console.log('SW fallo', err));
             });
         }

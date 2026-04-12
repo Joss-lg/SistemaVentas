@@ -183,8 +183,8 @@
         const isDark = document.documentElement.classList.contains('dark');
         
         Swal.fire({
-            title: '¿BORRAR AL PENDEJO ESTE?',
-            text: "No podrá volver a entrar al sistema y sus ventas se quedarán huérfanas.",
+            title: '¿BORRAR AL CAJERO?',
+            text: "No podrá volver a entrar al sistema y sus ventas se quedarán sin cajero.",
             icon: 'warning',
             showCancelButton: true,
             background: isDark ? '#0d0d0d' : '#ffffff',

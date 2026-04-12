@@ -232,18 +232,18 @@
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white dark:bg-[#0d0d0d] w-full max-w-2xl rounded-[2.5rem] shadow-2xl p-8 border border-zinc-200 dark:border-white/10">
             
-            <h3 class="text-3xl font-black italic text-zinc-900 dark:text-white uppercase mb-6">
+            <h3 class="text-3xl font-black italic text-zinc-900 dark:text-white uppercase mb-6 tracking-tighter">
                 Ventas en <span class="text-red-600">Espera</span>
             </h3>
 
-            <div class="bg-zinc-50 dark:bg-white/5 rounded-3xl p-2 border border-zinc-100 dark:border-white/5">
-                <table class="w-full text-left">
+            <div class="bg-zinc-50 dark:bg-white/5 rounded-3xl p-2 border border-zinc-100 dark:border-white/5 max-h-[400px] overflow-y-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
                     <tbody id="listaVentasEspera" class="divide-y divide-zinc-200 dark:divide-white/5">
                         </tbody>
                 </table>
             </div>
 
-            <button onclick="cerrarModalRecuperar()" class="mt-8 w-full bg-zinc-100 dark:bg-white/10 p-6 text-zinc-500 font-black uppercase rounded-2xl hover:bg-red-600 hover:text-white transition-all text-xl italic">
+            <button onclick="cerrarModalRecuperar()" class="mt-8 w-full bg-zinc-100 dark:bg-white/10 p-6 text-zinc-500 dark:text-zinc-400 font-black uppercase rounded-2xl hover:bg-red-600 hover:text-white transition-all text-xl italic tracking-widest">
                 Cerrar Ventana
             </button>
         </div>
@@ -392,19 +392,34 @@ function seleccionarProductoVenta(data) {
 // ==========================================
 function buscarProductoNombreProveedor(query) {
     const contenedor = document.getElementById('sugerencias-prov');
-    if (query.length < 2) { contenedor.classList.add('hidden'); return; }
+    if (query.length < 2) { 
+        contenedor.classList.add('hidden'); 
+        return; 
+    }
+
     const renderProv = (productos) => {
         let html = "";
         productos.forEach(p => {
             const pData = btoa(JSON.stringify(p));
-            html += `<div onclick="seleccionarProductoProv('${pData}')" class="p-4 border-b border-white/5 hover:bg-blue-600/20 cursor-pointer transition-all">
-                <p class="text-white font-black text-xs uppercase italic">${p.descripcion}</p>
-            </div>`;
+            // Ajuste de colores: text-zinc-900 en claro, dark:text-white en oscuro
+            html += `
+                <div onclick="seleccionarProductoProv('${pData}')" 
+                    class="p-4 border-b border-zinc-100 dark:border-white/5 hover:bg-red-600/10 dark:hover:bg-red-600/20 cursor-pointer transition-all">
+                    <p class="text-zinc-900 dark:text-white font-black text-xs uppercase italic">${p.descripcion}</p>
+                </div>`;
         });
-        contenedor.innerHTML = html; contenedor.classList.remove('hidden');
+        contenedor.innerHTML = html; 
+        contenedor.classList.remove('hidden');
     };
-    if (!navigator.onLine) renderProv(buscarLocal(query));
-    else fetch(`{{ url('/ventas/buscar-nombre') }}?q=${query}`).then(res => res.json()).then(productos => renderProv(productos)).catch(() => renderProv(buscarLocal(query)));
+
+    if (!navigator.onLine) {
+        renderProv(buscarLocal(query));
+    } else {
+        fetch(`{{ url('/ventas/buscar-nombre') }}?q=${query}`)
+            .then(res => res.json())
+            .then(productos => renderProv(productos))
+            .catch(() => renderProv(buscarLocal(query)));
+    }
 }
 
 function seleccionarProductoProv(dataBase64) {
@@ -422,7 +437,8 @@ function agregarAListaTemporalProv() {
     const costo = parseFloat(document.getElementById('prov-costo-total').value) || 0;
     
     if (!productoProvSeleccionado || isNaN(cant) || cant <= 0) {
-        notify('warning', 'DATOS INVÁLIDOS'); return;
+        if (typeof notify === 'function') notify('warning', 'DATOS INVÁLIDOS'); 
+        return;
     }
 
     listaTemporalProveedor.push({
@@ -442,20 +458,26 @@ function agregarAListaTemporalProv() {
 
 function renderListaProv() {
     const tbody = document.getElementById('lista-items-prov');
+    if (!tbody) return;
+
     tbody.innerHTML = "";
     listaTemporalProveedor.forEach((item, index) => {
+        // Ajuste de colores en las filas de la tabla para visibilidad total
         tbody.innerHTML += `
-            <tr class="border-b border-white/5">
-                <td class="p-4 font-black">${item.cantidad}</td>
-                <td class="p-4 uppercase italic text-zinc-400">${item.descripcion}</td>
-                <td class="p-4 text-right">$${item.costo_unitario.toFixed(2)}</td>
-                <td class="p-4 text-right text-green-500 font-black">$${item.subtotal.toFixed(2)}</td>
+            <tr class="border-b border-zinc-100 dark:border-white/5">
+                <td class="p-4 font-black text-zinc-900 dark:text-white">${item.cantidad}</td>
+                <td class="p-4 uppercase italic font-bold text-zinc-700 dark:text-zinc-300">${item.descripcion}</td>
+                <td class="p-4 text-right text-zinc-900 dark:text-white">$${item.costo_unitario.toFixed(2)}</td>
+                <td class="p-4 text-right text-green-600 dark:text-green-400 font-black">$${item.subtotal.toFixed(2)}</td>
                 <td class="p-4 text-center">
-                    <button onclick="eliminarItemProv(${index})" class="text-zinc-600 hover:text-red-600">&times;</button>
+                    <button onclick="eliminarItemProv(${index})" 
+                        class="text-zinc-400 hover:text-red-600 transition-colors text-xl">&times;</button>
                 </td>
             </tr>`;
     });
-    document.getElementById('contador-items-prov').innerText = `${listaTemporalProveedor.length} ARTÍCULOS`;
+    
+    const contador = document.getElementById('contador-items-prov');
+    if (contador) contador.innerText = `${listaTemporalProveedor.length} ARTÍCULOS`;
 }
 
 function eliminarItemProv(i) {
@@ -466,7 +488,8 @@ function eliminarItemProv(i) {
 function guardarEntradaStock() {
     const proveedor = document.getElementById('prov-nombre').value.trim();
     if (listaTemporalProveedor.length === 0 || !proveedor) {
-        notify('warning', 'PROVEEDOR O LISTA VACÍA'); return;
+        if (typeof notify === 'function') notify('warning', 'PROVEEDOR O LISTA VACÍA'); 
+        return;
     }
 
     const payload = { proveedor: proveedor, productos: listaTemporalProveedor };
@@ -475,31 +498,38 @@ function guardarEntradaStock() {
         let cola = JSON.parse(localStorage.getItem('cola_stock_offline')) || [];
         cola.push(payload);
         localStorage.setItem('cola_stock_offline', JSON.stringify(cola));
-        notify('warning', 'STOCK GUARDADO OFFLINE');
+        if (typeof notify === 'function') notify('warning', 'STOCK GUARDADO OFFLINE');
         limpiarYSalirProv();
         return;
     }
 
     fetch("{{ route('inventario.agregar-stock') }}", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": "{{ csrf_token() }}" },
+        headers: { 
+            "Content-Type": "application/json", 
+            "X-CSRF-TOKEN": "{{ csrf_token() }}" 
+        },
         body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            notify('success', 'MERCANCÍA REGISTRADA');
+            if (typeof notify === 'function') notify('success', 'MERCANCÍA REGISTRADA');
             limpiarYSalirProv();
             setTimeout(() => location.reload(), 1500);
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
     });
 }
 
 function limpiarYSalirProv() {
     listaTemporalProveedor = [];
-    document.getElementById('prov-nombre').value = "";
+    const inputProv = document.getElementById('prov-nombre');
+    if (inputProv) inputProv.value = "";
     renderListaProv();
-    cerrarModalProveedor();
+    if (typeof cerrarModalProveedor === 'function') cerrarModalProveedor();
 }
 
 // ==========================================
@@ -645,23 +675,90 @@ async function pausarVenta() {
 }
 
 function abrirModalRecuperar() {
-    document.getElementById('modalVentasEspera').classList.remove('hidden');
+    const modal = document.getElementById('modalVentasEspera');
     const tbody = document.getElementById('listaVentasEspera');
+    
+    if (!modal || !tbody) return;
+
+    modal.classList.remove('hidden');
     tbody.innerHTML = '';
+    
     const pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
+    
+    if (pausadas.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="2" class="p-10 text-center text-zinc-400 font-bold uppercase tracking-widest text-xs">
+                    No hay ventas en espera en este equipo.
+                </td>
+            </tr>`;
+        return;
+    }
+
     pausadas.forEach(v => {
-        tbody.innerHTML += `<tr><td class="p-4 text-white">${new Date(v.fecha).toLocaleString()} (Local)</td>
-        <td class="p-4 text-right"><button onclick="recuperarLocal(${v.id})" class="bg-green-600 text-white px-4 py-2 rounded">Seleccionar</button></td></tr>`;
+        tbody.innerHTML += `
+            <tr class="border-b border-zinc-100 dark:border-white/5 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                <td class="p-5">
+                    <div class="flex flex-col">
+                        <span class="text-zinc-900 dark:text-white font-black italic uppercase text-lg leading-tight">
+                            ${new Date(v.fecha).toLocaleString()}
+                        </span>
+                        <span class="text-zinc-400 font-bold text-[10px] uppercase tracking-widest mt-1">
+                            ID LOCAL: #${v.id}
+                        </span>
+                    </div>
+                </td>
+                <td class="p-5 text-right">
+                    <button onclick="recuperarLocal(${v.id})" 
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-black uppercase text-xs italic transition-all active:scale-95 shadow-lg shadow-green-900/20">
+                        Seleccionar
+                    </button>
+                </td>
+            </tr>`;
     });
 }
 
+/**
+ * Recupera una venta específica y la carga en el carrito.
+ * @param {number} id - ID de la venta a recuperar.
+ */
 function recuperarLocal(id) {
     let pausadas = JSON.parse(localStorage.getItem('ventas_pausadas_local')) || [];
     const venta = pausadas.find(v => v.id === id);
+    
     if (venta) {
-        carrito = venta.productos; renderizarTabla();
-        localStorage.setItem('ventas_pausadas_local', JSON.stringify(pausadas.filter(v => v.id !== id)));
+        // Cargar productos al carrito global
+        carrito = venta.productos; 
+        
+        // Actualizar la interfaz de la tabla de ventas
+        if (typeof renderizarTabla === 'function') {
+            renderizarTabla();
+        }
+        
+        // Actualizar localStorage eliminando la venta recuperada
+        const nuevasPausadas = pausadas.filter(v => v.id !== id);
+        localStorage.setItem('ventas_pausadas_local', JSON.stringify(nuevasPausadas));
+        
+        // Notificación con SweetAlert2
+        Swal.fire({
+            icon: 'success',
+            title: 'Venta Recuperada',
+            text: 'Los productos se han cargado al carrito correctamente.',
+            timer: 2000,
+            showConfirmButton: false,
+            background: document.documentElement.classList.contains('dark') ? '#0d0d0d' : '#fff',
+            color: document.documentElement.classList.contains('dark') ? '#fff' : '#000'
+        });
+        
         cerrarModalRecuperar();
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo localizar la venta seleccionada.',
+            background: document.documentElement.classList.contains('dark') ? '#0d0d0d' : '#fff',
+            color: document.documentElement.classList.contains('dark') ? '#fff' : '#000'
+        });
     }
 }
 
