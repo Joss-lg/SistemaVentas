@@ -183,18 +183,22 @@
         const isDark = document.documentElement.classList.contains('dark');
         
         Swal.fire({
-            title: '¿BORRAR AL CAJERO?',
+            title:'¿BORRAR AL CAJERO?',
             text: "No podrá volver a entrar al sistema y sus ventas se quedarán sin cajero.",
             icon: 'warning',
             showCancelButton: true,
             background: isDark ? '#0d0d0d' : '#ffffff',
             color: isDark ? '#ffffff' : '#18181b',
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: isDark ? '#27272a' : '#f4f4f5',
-            confirmButtonText: 'SÍ, CÓRRELO',
+            confirmButtonColor: '#dc2626', // Rojo más intenso
+            cancelButtonColor: isDark ? '#27272a' : '#e4e4e7', // Zinc rudo
+            confirmButtonText: 'SÍ',
             cancelButtonText: 'MEJOR NO',
+            reverseButtons: true, // Pone el cancelar a la izquierda (estándar de UX)
             customClass: {
-                popup: 'rounded-[2rem] border border-white/10 shadow-2xl'
+            popup: 'rounded-[2.5rem] border border-zinc-200 dark:border-white/10 shadow-2xl',
+            title: 'font-black italic uppercase tracking-tighter text-3xl',
+            confirmButton: 'rounded-xl font-black italic uppercase text-xs px-6 py-4 shadow-lg shadow-red-900/20',
+            cancelButton: 'rounded-xl font-black italic uppercase text-xs px-6 py-4 text-zinc-500 dark:text-zinc-400'
             }
         }).then((result) => {
             if (result.isConfirmed) {

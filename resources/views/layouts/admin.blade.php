@@ -115,56 +115,92 @@
     </main>
 
     <script>
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        const dot = document.getElementById('switch-dot');
-        const html = document.documentElement;
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const dot = document.getElementById('switch-dot');
+    const html = document.documentElement;
 
-        themeToggleBtn.addEventListener('click', () => {
-            let nuevoTema = 'claro';
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                dot.style.transform = 'translateX(0.25rem)'; // 1 en rem aprox
-                nuevoTema = 'claro';
-            } else {
-                html.classList.add('dark');
-                dot.style.transform = 'translateX(1.375rem)'; // equivalente a translate-x-5.5
-                nuevoTema = 'oscuro';
-            }
-
-            fetch("{{ route('user.theme') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                },
-                body: JSON.stringify({ theme: nuevoTema })
-            });
-        });
-
-        function abrirCajonManual() {
-            if(confirm('¿Desea enviar la señal para abrir el cajón de dinero?')) {
-                const win = window.open("{{ route('admin.cajon.abrir') }}", 'Cajon', 'width=100,height=100,left=0,top=0');
-                if (win) {
-                    setTimeout(() => { win.close(); }, 500);
-                }
-            }
+    themeToggleBtn.addEventListener('click', () => {
+        let nuevoTema = 'claro';
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            dot.style.transform = 'translateX(0.25rem)'; // 1 en rem aprox
+            nuevoTema = 'claro';
+        } else {
+            html.classList.add('dark');
+            dot.style.transform = 'translateX(1.375rem)'; // equivalente a translate-x-5.5
+            nuevoTema = 'oscuro';
         }
 
-        window.addEventListener('keydown', function(e) {
-            if (e.key === 'F1') {
-                e.preventDefault();
-                window.location.href = "{{ route('ventas.index') }}";
+        fetch("{{ route('user.theme') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': "{{ csrf_token() }}"
+            },
+            body: JSON.stringify({ theme: nuevoTema })
+        });
+    });
+
+    // FUNCIÓN DE APERTURA DE CAJÓN OPTIMIZADA CON SWEETALERT2
+    function abrirCajonManual() {
+        Swal.fire({
+            title: 'SISTEMA F1 - CAJÓN',
+            text: '¿Confirmas el envío de señal para abrir el cajón de dinero?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626', // Rojo F1
+            cancelButtonColor: '#27272a', // Zinc oscuro
+            confirmButtonText: 'SÍ, ABRIR AHORA',
+            cancelButtonText: 'CANCELAR',
+            reverseButtons: true,
+            background: document.documentElement.classList.contains('dark') ? '#0d0d0d' : '#ffffff',
+            color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#09090b',
+            customClass: {
+                popup: 'rounded-[2rem] border-2 border-zinc-200 dark:border-white/10 shadow-2xl',
+                title: 'font-black italic uppercase tracking-tighter text-2xl',
+                confirmButton: 'rounded-xl font-black italic uppercase text-xs px-8 py-4 transition-transform hover:scale-105',
+                cancelButton: 'rounded-xl font-black italic uppercase text-xs px-8 py-4'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Ejecutamos la apertura mediante fetch para evitar ventanas emergentes molestas
+                fetch("{{ route('admin.cajon.abrir') }}")
+                    .then(() => {
+                        Swal.fire({
+                            title: 'SEÑAL ENVIADA',
+                            text: 'El cajón ha sido desbloqueado.',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false,
+                            background: document.documentElement.classList.contains('dark') ? '#0d0d0d' : '#ffffff',
+                            color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#09090b'
+                        });
+                    })
+                    .catch(err => {
+                        console.error('Error al abrir cajón:', err);
+                        // Si el fetch falla, intentamos tu método anterior como respaldo
+                        const win = window.open("{{ route('admin.cajon.abrir') }}", 'Cajon', 'width=100,height=100,left=0,top=0');
+                        if (win) { setTimeout(() => { win.close(); }, 500); }
+                    });
             }
         });
+    }
 
-        // Registro de Service Worker para modo offline
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('SW de Abarrotes registrado'))
-                    .catch(err => console.log('Fallo al registrar SW', err));
-            });
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'F1') {
+            e.preventDefault();
+            window.location.href = "{{ route('ventas.index') }}";
         }
-    </script>
+    });
+
+    // Registro de Service Worker para modo offline
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('SW de Abarrotes registrado'))
+                .catch(err => console.log('Fallo al registrar SW', err));
+        });
+    }
+</script>
 </body>
 </html>
