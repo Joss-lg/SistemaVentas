@@ -59,7 +59,7 @@ class InventarioController extends Controller
 
                 return response()->json([
                     'status'  => 'success',
-                    'mensaje' => 'Entrada registrada y stock actualizado chido'
+                    'mensaje' => 'Entrada registrada y stock actualizado'
                 ]);
             });
 
@@ -67,7 +67,7 @@ class InventarioController extends Controller
             Log::error("Error en agregarStock: " . $e->getMessage());
             return response()->json([
                 'status'  => 'error',
-                'mensaje' => 'Valió madres: ' . $e->getMessage()
+                'mensaje' => 'Nos se pudo agregar el stock: ' . $e->getMessage()
             ], 500);
         }
     }
