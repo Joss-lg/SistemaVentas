@@ -19,7 +19,5 @@ class DatabaseSeeder extends Seeder
             'activo' => true,
         ]);
 
-        // 2. Generamos 5 usuarios aleatorios adicionales (cajeros o supervisores)
-        Usuario::factory(5)->create();
     }
 }
