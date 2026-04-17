@@ -110,7 +110,7 @@
         </div>
     </aside>
 
-    <main class="flex-1 bg-zinc-50 dark:bg-black p-8 md:p-12 overflow-y-auto transition-colors duration-300">
+    <main class="flex-1 bg-zinc-50 dark:bg-black overflow-y-auto transition-colors duration-300">
         @yield('content')
     </main>
 

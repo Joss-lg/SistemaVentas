@@ -1,7 +1,12 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="p-6 bg-zinc-50 dark:bg-black min-h-screen text-zinc-900 dark:text-white transition-colors duration-300 sm:ml-64">
+{{-- 
+    ELIMINAMOS 'sm:ml-64' porque eso es lo que te movía el diseño a la derecha. 
+    Aseguramos 'w-full' para que use todo el espacio que liberamos en el layout.
+--}}
+<div class="p-6 bg-zinc-50 dark:bg-black min-h-screen text-zinc-900 dark:text-white transition-colors duration-300 w-full">
+    
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-bold text-zinc-800 dark:text-white flex items-center gap-2">
@@ -15,7 +20,12 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    {{-- 
+        MANTENEMOS TU GRID: 1 columna en móvil, 3 en pantallas grandes.
+        Como ahora el contenedor es más ancho, la tabla (col-span-2) se verá mucho mejor.
+    --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+        
         <div class="lg:col-span-1">
             <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-gray-800 shadow-2xl transition-colors">
                 <h3 class="text-xl font-bold mb-6 border-b border-zinc-100 dark:border-gray-800 pb-2 text-zinc-800 dark:text-white uppercase italic tracking-tighter">Nuevo Gasto Manual</h3>
@@ -88,20 +98,19 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-green-500/20 dark:border-green-500/30 hover:border-green-500 transition-all shadow-lg group">
-                    <div class="flex items-center gap-4 mb-4">
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-green-500/20 dark:border-green-500/30 hover:border-green-500 transition-all shadow-lg group">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="flex items-center gap-4">
                         <div class="bg-green-500/10 p-3 rounded-lg group-hover:scale-110 transition-transform">
                             <i class="fas fa-file-excel text-3xl text-green-500"></i>
                         </div>
                         <div>
                             <h3 class="text-xl font-black italic uppercase tracking-tighter text-zinc-800 dark:text-white">Reporte General</h3>
-                            <p class="text-[10px] text-green-500 font-mono font-bold tracking-widest uppercase">Excel Completo</p>
+                            <p class="text-[10px] text-green-500 font-mono font-bold tracking-widest uppercase leading-none">Excel Completo</p>
                         </div>
                     </div>
-                    <p class="text-zinc-500 dark:text-gray-400 mb-6 text-sm">Ventas, Cortes, Gastos e Inventario en un solo archivo.</p>
                     <a href="{{ route('admin.reporte.excel') }}" 
-                       class="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-black italic uppercase py-4 rounded-xl transition-all shadow-lg shadow-green-900/40">
+                       class="flex items-center justify-center gap-2 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-black italic uppercase py-4 px-10 rounded-xl transition-all shadow-lg shadow-green-900/40">
                         <i class="fas fa-download"></i> Descargar Reporte
                     </a>
                 </div>
