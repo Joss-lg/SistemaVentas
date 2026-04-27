@@ -17,6 +17,9 @@
 
     {{-- Cargamos SweetAlert y los recursos de Vite --}}
     <script src="{{ asset('js/sweetalert2.js') }}"></script>
+    {{-- AlpineJS para los modales de apertura/cierre --}}
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- CDN de Tailwind 3.4 para soporte híbrido --}}
@@ -41,16 +44,14 @@
         
         body { font-family: 'Inter', sans-serif; }
         .font-digital { font-family: 'Orbitron', sans-serif; }
+        [x-cloak] { display: none !important; }
         
-        /* Scrollbar ruda estilo industrial */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 10px; }
         
-        /* Ajuste para el punto del switch */
         .translate-x-full-custom { transform: translateX(1.375rem); }
 
-        /* Matar bordes y rings de enfoque */
         input:focus, button:focus, a:focus { outline: none !important; border: none !important; ring: 0 !important; --tw-ring-shadow: none !important; }
     </style>
 </head>
@@ -88,7 +89,6 @@
                 <span>Corte de Caja</span>
             </a>
 
-            {{-- PANEL DEL ADMIN: Usamos la función esAdmin() del modelo para que coincida con tu Middleware --}}
             @if(Auth::check() && Auth::user()->esAdmin())
                 <div class="pt-6 mt-6 border-t-2 border-zinc-100 dark:border-white/5">
                     <p class="text-[10px] font-black text-red-600 uppercase tracking-[0.3em] mb-4 ml-2">Administración</p>
@@ -108,7 +108,6 @@
         </nav>
 
         <div class="p-10 border-t border-zinc-200 dark:border-white/5 space-y-6">
-            {{-- Switch de Tema --}}
             <div class="flex items-center justify-between bg-zinc-100 dark:bg-white/5 p-3 rounded-lg border border-zinc-200 dark:border-white/5">
                 <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Modo Oscuro</span>
                 <button id="theme-toggle" class="relative inline-flex items-center h-5 w-10 rounded-full bg-zinc-300 dark:bg-red-600 transition-colors focus:outline-none">
@@ -135,6 +134,30 @@
             @yield('content')
         </div>
     </main>
+
+    {{-- MODAL DE APERTURA DE CAJA OBLIGATORIO --}}
+    @if(!session('turno_abierto'))
+    <div x-data="{ openApertura: true }" x-show="openApertura" x-cloak class="fixed inset-0 z-[3000] flex items-center justify-center bg-black/90 backdrop-blur-xl p-6">
+        <div class="bg-white dark:bg-[#0d0d0d] p-10 rounded-[3rem] w-full max-w-md border border-zinc-200 dark:border-white/10 shadow-2xl">
+            <div class="text-center mb-8">
+                <h2 class="text-hibrido text-3xl font-black italic uppercase leading-none">FONDO DE <br><span class="text-green-600">INICIO</span></h2>
+                <p class="text-zinc-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-3">Ingresa el efectivo disponible en caja</p>
+            </div>
+
+            <form action="{{ route('caja.apertura') }}" method="POST" class="space-y-6">
+                @csrf
+                <div class="relative">
+                    <span class="absolute left-6 top-1/2 -translate-y-1/2 text-hibrido font-black text-3xl opacity-30">$</span>
+                    <input type="number" name="monto_inicial" step="0.01" required autofocus placeholder="0.00"
+                        class="w-full bg-zinc-100 dark:bg-black p-8 pl-16 rounded-3xl text-hibrido text-5xl font-black outline-none border-2 border-transparent focus:border-green-600 transition-all text-center">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white font-black italic uppercase py-6 rounded-2xl shadow-xl border-b-4 border-green-900 active:scale-95 transition-all">
+                    ABRIR CAJA AHORA
+                </button>
+            </form>
+        </div>
+    </div>
+    @endif
 
     <script>
         const themeToggleBtn = document.getElementById('theme-toggle');
@@ -163,7 +186,6 @@
             });
         });
 
-        // ATAJO F1
         window.addEventListener('keydown', function(e) {
             if (e.key === 'F1') {
                 e.preventDefault();
@@ -171,7 +193,6 @@
             }
         });
 
-        // SERVICE WORKER
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')

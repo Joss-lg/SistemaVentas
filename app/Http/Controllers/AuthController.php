@@ -51,4 +51,23 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
         return redirect('/login');
     }
+    public function logoutEspecial(Request $request)
+    {
+        
+        Auth::guard('web')->logout();
+
+        
+        $request->session()->flush();
+
+        
+        $request->session()->invalidate();
+
+        // 4. Regenerar el token CSRF
+        $request->session()->regenerateToken();
+
+        
+        return redirect('/login')
+            ->with('corte_exito', 'Sesión cerrada correctamente')
+            ->withCookie(cookie()->forget('laravel_session')); 
+            }
 }

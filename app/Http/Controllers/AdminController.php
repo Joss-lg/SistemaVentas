@@ -14,48 +14,42 @@ use Illuminate\Support\Facades\DB;
 class AdminController extends Controller
 {
     public function dashboard()
-{
-    
-    $ventasHoy = Venta::whereDate('fecha', now())
-        ->where('estado', '!=', 'cancelada') 
-        ->sum('total');
+    {
+        $ventasHoy = Venta::whereDate('fecha', now())
+            ->where('estado', '!=', 'cancelada') 
+            ->sum('total');
 
-    $numVentas = Venta::whereDate('fecha', now())
-        ->where('estado', '!=', 'cancelada')
-        ->count();
-    $productosBajoStock = Producto::where('stock_actual', '<=', 5)->count();
+        $numVentas = Venta::whereDate('fecha', now())
+            ->where('estado', '!=', 'cancelada')
+            ->count();
+        $productosBajoStock = Producto::where('stock_actual', '<=', 5)->count();
 
-    
-    $ultimosCortes = CorteCaja::with('usuario')
-        ->orderBy('fecha_cierre', 'desc')
-        ->limit(6)
-        ->get();
+        $ultimosCortes = CorteCaja::with('usuario')
+            ->orderBy('fecha_cierre', 'desc')
+            ->limit(6)
+            ->get();
 
-    return view('admin.dashboard', compact(
-        'ventasHoy', 
-        'numVentas', 
-        'productosBajoStock', 
-        'ultimosCortes'
-    ));
-}
+        return view('admin.dashboard', compact(
+            'ventasHoy', 
+            'numVentas', 
+            'productosBajoStock', 
+            'ultimosCortes'
+        ));
+    }
 
-    // --- VISTA PARA EL ADMINISTRADOR ---
     public function productos()
     {
         $departamentos = DB::table('departamentos')->get();
         $productos = Producto::with('departamento')->get();
-        // Carga la vista de la carpeta admin
         return view('admin.productos', compact('productos', 'departamentos'));
     }
 
-    // --- VISTA PARA EL CAJERO ---
     public function inventarioCajero() {
-    $productos = Producto::with('departamento')->get();
-    $departamentos = DB::table('departamentos')->get();
-    return view('ventas.inventario', compact('productos', 'departamentos'));
-}
+        $productos = Producto::with('departamento')->get();
+        $departamentos = DB::table('departamentos')->get();
+        return view('ventas.inventario', compact('productos', 'departamentos'));
+    }
 
-    // --- MÉTODO DE GUARDADO CON ACTUALIZACIÓN DE STOCK ---
     public function storeProducto(Request $request)
     {
         $request->validate([
@@ -64,7 +58,7 @@ class AdminController extends Controller
             'precio_venta' => 'required|numeric',
             'stock_actual' => 'required|numeric',
             'departamento_id' => 'required|exists:departamentos,id',
-            'unidad_medida' => 'required',
+            'unitad_medida' => 'required',
         ]);
 
         try {
@@ -84,7 +78,6 @@ class AdminController extends Controller
             return redirect()->back()->with('success', 'Producto registrado en inventario.');
         } catch (\Exception $e) {
              return redirect()->back()->with('error', 'No se pudo guardar: ' . $e->getMessage());
-        
         }
     }
 
@@ -95,58 +88,72 @@ class AdminController extends Controller
     }
 
     /**
-     * SISTEMA DE CORTE DE CAJA
+     * SISTEMA DE CORTE DE CAJA ACTUALIZADO
      */
-    public function corteCaja()
+public function corteCaja()
     {
+        $montoInicial = session('monto_apertura', 0);
+        $hoy = today();
+
+        // 1. Sumamos Ventas
         $ventasDelTurno = Venta::where('usuario_id', Auth::id())
-            ->whereDate('fecha', today())
+            ->whereDate('fecha', $hoy)
+            ->where('estado', '!=', 'cancelada')
             ->sum('total');
 
-        return view('admin.corte', compact('ventasDelTurno'));
+        // 2. Sumamos Compras de Mercancía (Salidas)
+        $totalCompras = \App\Models\Compra::whereDate('created_at', $hoy)
+            ->sum('costo_total');
+
+        // 3. Cálculo Final: (Fondo + Ventas) - Compras
+        $totalSistema = ($montoInicial + $ventasDelTurno) - $totalCompras;
+
+        return view('admin.corte', compact('ventasDelTurno', 'montoInicial', 'totalSistema', 'totalCompras'));
     }
 
     public function guardarCorte(Request $request)
     {
-        // 1. Validación
         $request->validate([
             'efectivo_real' => 'required|numeric',
             'ventas_esperadas' => 'required|numeric',
         ]);
 
         try {
-            // 2. Calculamos la diferencia (mismo nombre que tu columna en DB)
+            DB::beginTransaction();
+
             $difference = $request->efectivo_real - $request->ventas_esperadas;
 
-            // 3. Guardamos con los nombres EXACTOS de tu imagen (image_212365.png)
+            // --- CORRECCIÓN DE FECHAS PARA MYSQL ---
+            // Si la sesión trae un formato raro, Carbon lo limpia a YYYY-MM-DD HH:MM:SS
+            $fechaAperturaRaw = session('hora_apertura') ?? now();
+            $fechaApertura = \Carbon\Carbon::parse($fechaAperturaRaw)->format('Y-m-d H:i:s');
+            $fechaCierre = now()->format('Y-m-d H:i:s');
+
             \App\Models\CorteCaja::create([
-                'usuario_id'            => auth()->id(),
-                'fecha_apertura'        => now(), 
-                'fecha_cierre'          => now(),
-                'monto_inicial'         => $request->monto_inicial ?? 0,
+                'usuario_id'            => Auth::id(),
+                'fecha_apertura'        => $fechaApertura, 
+                'fecha_cierre'          => $fechaCierre,
+                'monto_inicial'         => session('monto_apertura', 0),
                 'total_ventas_efectivo' => $request->ventas_esperadas,
                 'total_ventas_tarjeta'  => 0, 
                 'total_esperado'        => $request->ventas_esperadas,
                 'total_contado'         => $request->efectivo_real,
-                'difference'            => $difference, // <-- CAMBIADO A "difference"
+                'difference'            => $difference,
                 'notas'                 => 'Corte de caja realizado'
             ]);
 
-            // 4. CIERRE FORZOSO DE SESIÓN
-            auth()->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            DB::commit();
 
-            return redirect('/login')->with('success', '¡Corte guardado y turno cerrado!');
+            // Mandamos a la ruta que limpia toda la sesión y cookies
+            return redirect()->route('logout.especial');
 
         } catch (\Exception $e) {
-            // Si falla, aquí verás el error real en pantalla
-            return back()->withErrors(['error' => 'Error en la DB: ' . $e->getMessage()]);
+            DB::rollBack();
+            // Si vuelve a fallar, el dd() te dirá exactamente qué columna o dato es el pedo
+            dd("Error al guardar el corte: " . $e->getMessage()); 
         }
     }
-        /**
-     * GESTIÓN DE USUARIOS (Cajeros)
-     */
+
     public function usuariosIndex()
     {
         $usuarios = Usuario::all();
@@ -207,29 +214,48 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Usuario eliminado correctamente.');
     }
 
-    /**
-     * REPORTES
-     */
     public function reportes()
     {
         $reportes = Venta::with('usuario')->orderBy('fecha', 'desc')->get();
         return view('admin.reportes', compact('reportes'));
     }
+
     public function historialCompras()
     {
-        // Obtenemos las compras con la información del producto relacionado
         $compras = \App\Models\Compra::with('producto')
             ->orderBy('created_at', 'desc')
             ->get();
 
         return view('admin.compras.index', compact('compras'));
     }
+
     public function listarVentasEspera() {
-    // Solo mostramos las del usuario actual para evitar confusiones
-    return response()->json(
-        \App\Models\VentaEspera::where('usuario_id', auth()->id())
-            ->orderBy('fecha_pausa', 'desc')
-            ->get()
-    );
-}
+        return response()->json(
+            \App\Models\VentaEspera::where('usuario_id', auth()->id())
+                ->orderBy('fecha_pausa', 'desc')
+                ->get()
+        );
+    }
+
+    /**
+     * --- MÉTODOS DE CAJA (APERTURA Y CIERRE) ---
+     */
+    public function aperturaCaja(Request $request)
+    {
+        $request->validate(['monto_inicial' => 'required|numeric|min:0']);
+
+        session([
+            'turno_abierto' => true,
+            'monto_apertura' => $request->monto_inicial,
+            'hora_apertura' => now()
+        ]);
+
+        return redirect()->back()->with('success', 'Caja abierta.');
+    }
+
+    public function cierreSesion()
+    {
+        session()->forget(['turno_abierto', 'monto_apertura', 'hora_apertura']);
+        return redirect()->route('admin.corte');
+    }
 }

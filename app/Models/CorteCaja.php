@@ -18,7 +18,7 @@ class CorteCaja extends Model
     'total_ventas_tarjeta', 
     'total_esperado', 
     'total_contado', 
-    'diferencia', 
+    'difference', 
     'notas'
 ];
 public function usuario()

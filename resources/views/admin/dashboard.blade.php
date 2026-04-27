@@ -70,44 +70,49 @@
             </h3>
         </div>
         
-        <div class="overflow-x-auto px-6 pb-6 mt-4">
-            <table class="w-full text-left border-separate border-spacing-y-3">
-                <thead>
-                    <tr class="text-zinc-400 dark:text-zinc-500 font-black uppercase italic text-[10px] tracking-widest px-6">
-                        <th class="px-6 py-2">Fecha de Cierre</th>
-                        <th class="px-6 py-2">Responsable</th>
-                        <th class="px-6 py-2">Contado Real</th>
-                        <th class="px-6 py-2 text-right">Diferencia</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm">
-                    @forelse($ultimosCortes as $corte)
-                    <tr class="bg-zinc-50 dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-all rounded-2xl">
-                        <td class="px-6 py-5 font-mono text-zinc-500 rounded-l-2xl border-l border-y border-zinc-200/50 dark:border-transparent">
-                            {{ \Carbon\Carbon::parse($corte->fecha_cierre)->format('d/m/Y H:i') }}
-                        </td>
-                        <td class="px-6 py-5 font-black italic text-zinc-800 dark:text-white uppercase">
+    <div class="overflow-x-auto px-6 pb-6 mt-4">
+        <table class="w-full text-left border-separate border-spacing-y-3">
+            <thead>
+                <tr class="text-zinc-500 dark:text-zinc-400 font-black uppercase italic text-[10px] tracking-[0.2em] px-6">
+                    <th class="px-6 py-2">Fecha de Cierre</th>
+                    <th class="px-6 py-2">Responsable</th>
+                    <th class="px-6 py-2">Contado Real</th>
+                    <th class="px-6 py-2 text-right">Diferencia</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+                @forelse($ultimosCortes as $corte)
+                <tr class="bg-white dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all rounded-2xl shadow-sm dark:shadow-none">
+                    <td class="px-6 py-5 font-mono text-zinc-500 dark:text-zinc-400 rounded-l-2xl border-l border-y border-zinc-200 dark:border-white/5">
+                        {{ \Carbon\Carbon::parse($corte->fecha_cierre)->format('d/m/Y H:i') }}
+                    </td>
+                    
+                    <td class="px-6 py-5 font-black italic text-zinc-800 dark:text-zinc-100 uppercase border-y border-zinc-200 dark:border-white/5">
+                        <span class="text-orange-600 dark:text-orange-500">
                             {{ $corte->usuario->username ?? 'SISTEMA' }}
-                        </td>
-                        <td class="px-6 py-5 font-bold text-zinc-900 dark:text-white">
-                            ${{ number_format($corte->total_contado, 2) }}
-                        </td>
-                        <td class="px-6 py-5 text-right rounded-r-2xl border-r border-y border-zinc-200/50 dark:border-transparent">
-                            <span class="inline-block px-4 py-1.5 rounded-lg text-[10px] font-black italic uppercase {{ $corte->difference < 0 ? 'bg-red-600/10 text-red-500' : 'bg-green-600/10 text-green-500' }}">
-                                ${{ number_format($corte->difference, 2) }}
-                            </span>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="4" class="p-10 text-center text-zinc-400 uppercase italic font-black">
-                            No se encontraron registros de cortes recientes.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                        </span>
+                    </td>
+                    
+                    <td class="px-6 py-5 font-bold text-zinc-900 dark:text-white border-y border-zinc-200 dark:border-white/5">
+                        ${{ number_format($corte->total_contado, 2) }}
+                    </td>
+                    
+                    <td class="px-6 py-5 text-right rounded-r-2xl border-r border-y border-zinc-200 dark:border-white/5">
+                        <span class="inline-block px-4 py-1.5 rounded-lg text-[10px] font-black italic uppercase {{ $corte->difference < 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-400' }} border {{ $corte->difference < 0 ? 'border-red-500/20' : 'border-emerald-500/20' }}">
+                            ${{ number_format($corte->difference, 2) }}
+                        </span>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="4" class="p-10 text-center text-zinc-400 dark:text-zinc-600 uppercase italic font-black tracking-widest">
+                        No se encontraron registros de cortes recientes.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
     </div>
 </div>
 @endsection

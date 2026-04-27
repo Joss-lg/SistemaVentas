@@ -80,6 +80,23 @@
             </p>
         </footer>
     </div>
-
+        
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    @if(session('corte_exito'))
+    <script>
+        Swal.fire({
+            title: '¡SISTEMA CERRADO!',
+            text: "{{ session('corte_exito') }}",
+            icon: 'success',
+            confirmButtonColor: '#ea580c',
+            background: '#0d0d0d',
+            color: '#ffffff',
+            customClass: {
+                popup: 'rounded-3xl border border-white/10'
+            }
+        });
+    </script>
+    @endif
 </body>
 </html>
