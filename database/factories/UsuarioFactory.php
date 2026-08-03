@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Usuario>
+ * @extends Factory<Usuario>
  */
 class UsuarioFactory extends Factory
 {
@@ -19,7 +19,7 @@ class UsuarioFactory extends Factory
             'nombre' => fake()->name(),
             'username' => fake()->unique()->userName(),
             // Usamos tu nombre de columna 'password_hash'
-            'password_hash' => Hash::make('password'), 
+            'password_hash' => Hash::make('password'),
             // Elegimos un rol aleatorio de los que definiste en el enum
             'rol' => fake()->randomElement(['administrador', 'cajero', 'supervisor']),
             'activo' => true,

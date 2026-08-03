@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ventas_espera', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('usuario_id')->constrained('usuarios');
-    $table->timestamp('fecha_pausa')->useCurrent();
-    $table->json('carrito_data'); 
-});
+            $table->id();
+            $table->foreignId('usuario_id')->constrained('usuarios');
+            $table->timestamp('fecha_pausa')->useCurrent();
+            $table->json('carrito_data');
+        });
     }
 
     /**

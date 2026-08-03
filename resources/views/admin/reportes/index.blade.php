@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('layouts.cajero')
 
 @section('title', 'Reporte de Ventas | Admin')
 
@@ -120,7 +120,7 @@
         
         Swal.fire({
             title: '¿ANULAR VENTA?',
-            text: "Esta acción borrará el registro para siempre y no hay marcha atrás, pendejo.",
+            text: "Esta acción borrará el registro para siempre ",
             icon: 'warning',
             showCancelButton: true,
             background: isDark ? '#0d0d0d' : '#ffffff',

@@ -4,13 +4,13 @@
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-8 p-4 md:p-0 transition-colors duration-300">
-    {{-- Encabezado con Estilo --}}
+    {{-- Encabezado con Fecha (Sin la hora) --}}
     <div class="border-b border-zinc-200 dark:border-white/5 pb-6">
         <h2 class="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-zinc-900 dark:text-white">
             CERRAR <span class="text-orange-500">CAJA</span>
         </h2>
         <p class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-1 ml-1">
-            Resumen de ventas del turno: {{ now()->format('d/m/Y H:i A') }}
+            Resumen de ventas del turno: {{ now()->format('d/m/Y') }}
         </p>
     </div>
 
@@ -29,8 +29,7 @@
         <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-8 rounded-3xl shadow-2xl transition-colors">
             <form action="{{ route('admin.corte.store') }}" method="POST" id="formCorte" class="space-y-6">
                 @csrf
-                {{-- Enviamos los valores reales al controlador --}}
-                <input type="hidden" name="ventas_esperadas" value="{{ $totalSistema }}">
+                <input type="hidden" name="ventas_esperadas" id="ventas_esperadas" value="{{ $totalSistema }}">
                 <input type="hidden" name="monto_inicial" value="{{ $montoInicial }}">
 
                 <div>
@@ -45,7 +44,8 @@
                     </div>
                 </div>
 
-                <button type="button" onclick="confirmarCorte()"
+                {{-- Botón submit (interceptado por JS con id="formCorte") --}}
+                <button type="submit"
                         class="w-full bg-orange-600 hover:bg-orange-500 text-white font-black italic py-5 rounded-2xl transition-all uppercase text-xs tracking-[0.2em] shadow-xl shadow-orange-900/30 transform hover:scale-[1.02] active:scale-95">
                     GUARDAR Y FINALIZAR TURNO
                 </button>
@@ -69,7 +69,6 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100 dark:divide-white/5">
-                    {{-- Fondo Inicial --}}
                     <tr class="group hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                         <td class="px-6 py-4">
                             <p class="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase">Fondo de Inicio</p>
@@ -79,7 +78,6 @@
                             +${{ number_format($montoInicial, 2) }}
                         </td>
                     </tr>
-                    {{-- Ventas --}}
                     <tr class="group hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                         <td class="px-6 py-4">
                             <p class="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase">Ventas Totales</p>
@@ -89,7 +87,6 @@
                             +${{ number_format($ventasDelTurno, 2) }}
                         </td>
                     </tr>
-                    {{-- Entrada de Mercancía (Compras/Salidas) --}}
                     @if(isset($totalCompras) && $totalCompras > 0)
                     <tr class="group hover:bg-red-500/5 transition-colors">
                         <td class="px-6 py-4">
@@ -124,46 +121,9 @@
                 ¡Alerta con el conteo! <span class="text-orange-600 italic">No vayas a sumar mal.</span>
             </p>
             <p class="text-[10px] text-zinc-500 dark:text-zinc-500 font-bold uppercase mt-1">
-                Asegúrate de contar bien el efectivo. Una vez guardado el corte, los datos se enviarán al administrador para su revisión inmediata.
+                Asegúrate de contar bien el efectivo. Si el monto ingresado es menor al total del sistema, la caja no se podrá cerrar.
             </p>
         </div>
     </div>
 </div>
-
-{{-- Scripts de Alerta --}}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    function confirmarCorte() {
-        const efectivo = document.getElementById('efectivo_real').value;
-        
-        if(!efectivo || efectivo <= 0) {
-            Swal.fire({
-                title: '¡Eit, pendejo!',
-                text: 'Pon cuánto dinero hay en la caja primero.',
-                icon: 'error',
-                confirmButtonColor: '#ea580c',
-                background: '#0d0d0d',
-                color: '#ffffff'
-            });
-            return;
-        }
-
-        Swal.fire({
-            title: '¿Confirmar cierre?',
-            text: "Se guardará el corte y se cerrará tu sesión. ¡Revisa bien la lana!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ea580c',
-            cancelButtonColor: '#3f3f46',
-            confirmButtonText: 'Sí, cerrar sesión',
-            cancelButtonText: 'No, deja checo',
-            background: '#0d0d0d',
-            color: '#ffffff'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('formCorte').submit();
-            }
-        });
-    }
-</script>
 @endsection

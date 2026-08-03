@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use App\Models\Usuario;
 
 class AuthController extends Controller
 {
@@ -49,25 +48,24 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/login');
     }
+
     public function logoutEspecial(Request $request)
     {
-        
+
         Auth::guard('web')->logout();
 
-        
         $request->session()->flush();
 
-        
         $request->session()->invalidate();
 
         // 4. Regenerar el token CSRF
         $request->session()->regenerateToken();
 
-        
         return redirect('/login')
             ->with('corte_exito', 'Sesión cerrada correctamente')
-            ->withCookie(cookie()->forget('laravel_session')); 
-            }
+            ->withCookie(cookie()->forget('laravel_session'));
+    }
 }

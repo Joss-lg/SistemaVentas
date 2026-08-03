@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('layouts.cajero')
 
 @section('title', 'Panel de Control')
 

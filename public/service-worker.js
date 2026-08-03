@@ -1,69 +1,76 @@
-const CACHE_NAME = 'abarrotes-v1';
+const CACHE_STATIC = 'f1-static-v1';
+const CACHE_ASSETS = 'f1-assets-v1';
 
-// Solo guardamos lo básico para que la app arranque sin errores
-const urlsToCache = [
-    '/',
-    '/login',
-    '/manifest.json'
-];
-
-// 1. Instalación: Guarda lo básico
-self.addEventListener('install', e => {
-    e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return Promise.all(
-                urlsToCache.map(url => {
-                    return cache.add(url).catch(err => console.warn('No se guardó:', url));
-                })
-            );
-        })
-    );
+// 1. INSTALACIÓN: Forzar activación inmediata
+self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// 2. Activación: Limpia cachés viejos
-self.addEventListener('activate', e => {
-    e.waitUntil(
-        caches.keys().then(keys => {
+// 2. ACTIVACIÓN: Limpiar cachés viejos automáticamente cuando subas versión
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((keys) => {
             return Promise.all(
-                keys.map(key => {
-                    if (key !== CACHE_NAME) return caches.delete(key);
+                keys.map((key) => {
+                    if (key !== CACHE_STATIC && key !== CACHE_ASSETS) {
+                        console.log('[SW] Eliminando caché antiguo:', key);
+                        return caches.delete(key);
+                    }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
-    return self.clients.claim();
 });
 
-// 3. Estrategia Network First (Primero Red, si falla, Caché)
-// Esto evita que te bloquee el login o el acceso cuando estás online
-self.addEventListener('fetch', e => {
-    // IMPORTANTE: No tocar peticiones POST (Ventas, Cortes, Login)
-    if (e.request.method !== 'GET') return;
+// 3. ESTRATEGIA DE CACHÉ (FETCH)
+self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
 
-    e.respondWith(
-        fetch(e.request)
-            .then(res => {
-                // Si la red jala, clonamos y guardamos en caché para la próxima
-                const resClone = res.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(e.request, resClone);
-                });
-                return res;
-            })
-            .catch(() => {
-                // Si NO hay red (Offline), buscamos en el caché
-                return caches.match(e.request).then(res => {
-                    if (res) return res;
-                    
-                    // Si intentas entrar a una página y no hay caché ni red, mandamos al inicio
-                    if (e.request.mode === 'navigate') {
-                        return caches.match('/');
+    // Solo interceptar peticiones GET
+    if (event.request.method !== 'GET') return;
+
+    // A) Assets compilados por Vite (/build/ CSS, JS, fonts, imágenes)
+    // Estrategia: Cache First (Si está en caché lo sirve rápido; si no, lo descarga y guarda)
+    if (url.pathname.startsWith('/build/')) {
+        event.respondWith(
+            caches.open(CACHE_ASSETS).then(async (cache) => {
+                const cachedResponse = await cache.match(event.request);
+                if (cachedResponse) return cachedResponse;
+
+                try {
+                    const networkResponse = await fetch(event.request);
+                    if (networkResponse && networkResponse.status === 200) {
+                        cache.put(event.request, networkResponse.clone());
                     }
-
-                    // Para todo lo demás (imágenes, scripts), mandamos una respuesta vacía
-                    return new Response('Offline', { status: 404, statusText: 'Offline mode' });
-                });
+                    return networkResponse;
+                } catch (error) {
+                    return cachedResponse;
+                }
             })
-    );
+        );
+        return;
+    }
+
+    // B) Navegación y HTML (Vistas de Blade)
+    // Estrategia: Network First con respaldo en caché (Para tener siempre la última versión online)
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .then(async (networkResponse) => {
+                    const cache = await caches.open(CACHE_STATIC);
+                    if (networkResponse.status === 200) {
+                        cache.put(event.request, networkResponse.clone());
+                    }
+                    return networkResponse;
+                })
+                .catch(async () => {
+                    const cachedResponse = await caches.match(event.request);
+                    if (cachedResponse) return cachedResponse;
+                    
+                    // Si no hay red ni página guardada, intenta mostrar el index o la última vista
+                    return caches.match('/');
+                })
+        );
+        return;
+    }
 });

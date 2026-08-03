@@ -2,25 +2,24 @@
 
 namespace App\Exports;
 
-use App\Models\Venta;
+use App\Models\CorteCaja;
 use App\Models\Gasto;
 use App\Models\Producto;
-use App\Models\CorteCaja;
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use App\Models\Venta;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Illuminate\Support\Facades\DB;
 
 class ReporteGeneralExport implements WithMultipleSheets
 {
     public function sheets(): array
     {
         return [
-            new VentasSheet(),      // Pestaña 1: Solo Ventas
-            new GastosSheet(),      // Pestaña 2: Solo Gastos (Egresos)
-            new CortesCajaSheet(),  // Pestaña 3: Cortes de Caja
-            new InventarioSheet(),  // Pestaña 4: Inventario
+            new VentasSheet,      // Pestaña 1: Solo Ventas
+            new GastosSheet,      // Pestaña 2: Solo Gastos (Egresos)
+            new CortesCajaSheet,  // Pestaña 3: Cortes de Caja
+            new InventarioSheet,  // Pestaña 4: Inventario
         ];
     }
 }
@@ -32,13 +31,19 @@ class VentasSheet implements FromCollection, WithHeadings, WithTitle
     {
         // Quitamos 'status' porque no existe en tu tabla
         return Venta::select('fecha', 'total', 'tipo_pago')
-                    ->orderBy('fecha', 'desc')
-                    ->get();
+            ->orderBy('fecha', 'desc')
+            ->get();
     }
-    public function headings(): array {
-        return ["Fecha/Hora", "Monto ($)", "Método de Pago"];
+
+    public function headings(): array
+    {
+        return ['Fecha/Hora', 'Monto ($)', 'Método de Pago'];
     }
-    public function title(): string { return 'Ventas'; }
+
+    public function title(): string
+    {
+        return 'Ventas';
+    }
 }
 
 // PESTAÑA 2: GASTOS (EGRESOS)
@@ -48,13 +53,19 @@ class GastosSheet implements FromCollection, WithHeadings, WithTitle
     {
         // Ajustado a monto y descripcion segun tu Excel
         return Gasto::select('created_at', 'monto', 'descripcion')
-                    ->orderBy('created_at', 'desc')
-                    ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
-    public function headings(): array {
-        return ["Fecha/Hora", "Monto ($)", "Descripción/Proveedor"];
+
+    public function headings(): array
+    {
+        return ['Fecha/Hora', 'Monto ($)', 'Descripción/Proveedor'];
     }
-    public function title(): string { return 'Gastos - Egresos'; }
+
+    public function title(): string
+    {
+        return 'Gastos - Egresos';
+    }
 }
 
 // PESTAÑA 3: CORTES DE CAJA
@@ -64,18 +75,24 @@ class CortesCajaSheet implements FromCollection, WithHeadings, WithTitle
     {
         // Usamos los campos exactos de tu tabla: total_esperado, total_contado, difference
         return CorteCaja::select(
-            'id', 
-            'fecha_cierre', 
-            'total_esperado', 
-            'total_contado', 
-            'difference', 
+            'id',
+            'fecha_cierre',
+            'total_esperado',
+            'total_contado',
+            'difference',
             'usuario_id'
         )->orderBy('fecha_cierre', 'desc')->get();
     }
-    public function headings(): array {
-        return ["ID Corte", "Fecha Cierre", "Esperado ($)", "Contado ($)", "Diferencia ($)", "Cajero ID"];
+
+    public function headings(): array
+    {
+        return ['ID Corte', 'Fecha Cierre', 'Esperado ($)', 'Contado ($)', 'Diferencia ($)', 'Cajero ID'];
     }
-    public function title(): string { return 'Cortes de Caja'; }
+
+    public function title(): string
+    {
+        return 'Cortes de Caja';
+    }
 }
 
 // PESTAÑA 4: INVENTARIO
@@ -85,8 +102,14 @@ class InventarioSheet implements FromCollection, WithHeadings, WithTitle
     {
         return Producto::select('codigo_barras', 'descripcion', 'precio_costo', 'precio_venta', 'stock_actual', 'stock_minimo')->get();
     }
-    public function headings(): array {
-        return ["Código", "Producto", "Costo ($)", "Venta ($)", "Stock Actual", "Mínimo"];
+
+    public function headings(): array
+    {
+        return ['Código', 'Producto', 'Costo ($)', 'Venta ($)', 'Stock Actual', 'Mínimo'];
     }
-    public function title(): string { return 'Inventario'; }
+
+    public function title(): string
+    {
+        return 'Inventario';
+    }
 }

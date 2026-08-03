@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('departamentos', function (Blueprint $table) {
-    $table->id();
-    $table->string('nombre', 100);
-    $table->text('descripcion')->nullable();
-    $table->boolean('activo')->default(true);
-});
+            $table->id();
+            $table->string('nombre', 100);
+            $table->text('descripcion')->nullable();
+            $table->boolean('activo')->default(true);
+        });
     }
 
     /**

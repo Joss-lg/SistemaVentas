@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-      Schema::create('ventas_detalle', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('venta_id')->constrained('ventas')->onDelete('cascade');
-    $table->foreignId('producto_id')->constrained('productos');
-    $table->string('descripcion', 200);
-    $table->decimal('cantidad', 10, 3);
-    $table->decimal('precio_unitario', 10, 2);
-    $table->decimal('subtotal', 10, 2);
-});
+        Schema::create('ventas_detalle', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('venta_id')->constrained('ventas')->onDelete('cascade');
+            $table->foreignId('producto_id')->constrained('productos');
+            $table->string('descripcion', 200);
+            $table->decimal('cantidad', 10, 3);
+            $table->decimal('precio_unitario', 10, 2);
+            $table->decimal('subtotal', 10, 2);
+        });
     }
 
     /**
