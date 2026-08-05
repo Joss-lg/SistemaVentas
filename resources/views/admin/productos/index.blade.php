@@ -9,7 +9,7 @@
                 Inventario <span class="text-orange-500">Admin</span>
             </h1>
             <p class="text-zinc-500 dark:text-zinc-400 text-sm font-medium uppercase tracking-widest italic">
-                Control total por departamentos
+                Control total por categorias
             </p>
         </div>
         

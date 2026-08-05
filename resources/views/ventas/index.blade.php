@@ -270,9 +270,21 @@
 <div id="modal-peso" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[99999] hidden flex items-center justify-center p-4 w-screen h-screen">
     <div class="bg-white dark:bg-[#111] border border-zinc-200 dark:border-white/10 w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl relative mx-auto my-auto">
         <h2 id="peso-producto-nombre" class="text-base font-black text-zinc-900 dark:text-white uppercase italic mb-3">Producto Granel</h2>
+
         <input type="number" id="input-peso-valor" step="0.001"
             class="w-full bg-zinc-100 dark:bg-black border-2 border-zinc-200 dark:border-white/10 rounded-2xl p-4 text-4xl font-black text-emerald-600 dark:text-emerald-500 text-center italic mb-4 outline-none focus:border-red-600"
             placeholder="0.000">
+
+        <div class="flex items-center justify-between mb-4 px-1">
+            <span id="bascula-estado" class="text-xs font-bold uppercase text-zinc-400 dark:text-zinc-500">
+                Báscula desconectada
+            </span>
+            <button id="bascula-conectar-btn" type="button"
+                class="text-xs font-black uppercase italic text-emerald-600 dark:text-emerald-500 hover:underline cursor-pointer">
+                Conectar báscula
+            </button>
+        </div>
+
         <div class="flex gap-3">
             <button id="confirmar-peso-btn" type="button" class="w-full bg-red-600 text-white p-3.5 rounded-2xl font-black uppercase italic shadow-lg hover:bg-red-700 transition cursor-pointer">Confirmar Peso</button>
         </div>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CajaController;
+use App\Http\Controllers\ConfiguracionHardwareController;
 use App\Http\Controllers\DepartamentoController;
 use App\Http\Controllers\GastoController;
 use App\Http\Controllers\InventarioController;
@@ -117,7 +118,7 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Gastos y Compras
-        Route::get('/gastos', [GastoController::class, 'index'])->name('admin.gastos');
+
         Route::post('/gastos', [GastoController::class, 'store'])->name('gastos.store');
         Route::get('/compras', [AdminController::class, 'historialCompras'])->name('admin.compras.index');
 
@@ -136,5 +137,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/ventas/cancelar/{id}', [AdminController::class, 'cancelarVenta'])->name('ventas.cancelar');
         Route::get('/abrir-cajon-manual', [VentaController::class, 'abrirCajonManual'])->name('admin.cajon.abrir');
         Route::post('/ventas/sincronizar-offline', [VentaController::class, 'sincronizar'])->name('admin.ventas.sincronizar');
+
+        // Configuración de Hardware (impresora, cajón, báscula)
+        Route::get('/configuracion-hardware', [ConfiguracionHardwareController::class, 'edit'])->name('admin.hardware.edit');
+        Route::put('/configuracion-hardware', [ConfiguracionHardwareController::class, 'update'])->name('admin.hardware.update');
     });
 });

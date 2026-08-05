@@ -2,7 +2,6 @@
     $userRol = strtolower(Auth::user()->rol ?? '');
     $esAdmin = ($userRol === 'admin' || $userRol === 'administrador');
 
-    // Sin permisos granulares por ahora (pausado) — cajero ve inventario por defecto
     $puedeVerInventario = $esAdmin || $userRol === 'cajero';
 
     $active = "bg-red-600 text-white shadow-[0_6px_14px_rgba(220,38,38,0.3)]";
@@ -114,9 +113,9 @@
                 </a>
 
                 {{-- DEPARTAMENTOS --}}
-                <a href="{{ route('departamentos.index') }}" :title="colapsado ? 'Departamentos' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('departamentos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+                <a href="{{ route('departamentos.index') }}" :title="colapsado ? 'Categoría' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('departamentos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-tag text-sm flex-shrink-0"></i>
-                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Departamentos</span>
+                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Categoría</span>
                 </a>
 
                 {{-- PRODUCTOS --}}
@@ -140,13 +139,13 @@
                 {{-- COMPRAS --}}
                 <a href="{{ route('admin.compras.index') }}" :title="colapsado ? 'Compras' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.compras.index') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-shopping-bag text-sm flex-shrink-0"></i>
-                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Compras</span>
+                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Proveedores</span>
                 </a>
 
-                {{-- FLUJO DE CAJA / GASTOS --}}
-                <a href="{{ route('admin.gastos') }}" :title="colapsado ? 'Flujo de caja' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.gastos') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
-                    <i class="fas fa-money-bill-wave text-sm flex-shrink-0"></i>
-                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Flujo de caja</span>
+                {{-- CONFIGURACIÓN DE HARDWARE --}}
+                <a href="{{ route('admin.hardware.edit') }}" :title="colapsado ? 'Config. Hardware' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.hardware.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+                    <i class="fas fa-microchip text-sm flex-shrink-0"></i>
+                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Config. Hardware</span>
                 </a>
 
                 {{-- GESTIONAR CAJEROS --}}
@@ -165,12 +164,30 @@
         </div>
     </nav>
 
-    {{-- FOOTER CON BOTÓN COMPACTO DE MODO Y CERRAR SESIÓN --}}
+    {{-- FOOTER CON BOTÓN DE MODO Y CERRAR SESIÓN --}}
     <div class="p-3 border-t border-zinc-200 dark:border-white/5 space-y-2 shrink-0">
-        <button @click="toggleTema()"
+
+        {{-- SWITCH DE TEMA (expandido) --}}
+        <button x-show="!colapsado" x-transition @click="toggleTema()"
             title="Cambiar Modo Claro / Oscuro"
-            class="w-full flex items-center justify-center p-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors cursor-pointer focus:outline-none">
-            <i :class="esOscuro ? 'fa-moon text-amber-400' : 'fa-sun text-amber-500'" class="fas text-base"></i>
+            class="relative w-full h-10 flex items-center rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 transition-colors cursor-pointer focus:outline-none overflow-hidden">
+            <span class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full bg-white dark:bg-zinc-800 shadow-md transition-transform duration-300 ease-out"
+                :class="esOscuro ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'"></span>
+            <span class="relative z-10 flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors"
+                :class="esOscuro ? 'text-zinc-400' : 'text-amber-500'">
+                <i class="fas fa-sun text-xs"></i>
+            </span>
+            <span class="relative z-10 flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors"
+                :class="esOscuro ? 'text-indigo-400' : 'text-zinc-400'">
+                <i class="fas fa-moon text-xs"></i>
+            </span>
+        </button>
+
+        {{-- BOTÓN DE MODO (colapsado, solo ícono) --}}
+        <button x-show="colapsado" x-transition @click="toggleTema()"
+            title="Cambiar Modo Claro / Oscuro"
+            class="w-full flex items-center justify-center h-10 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors cursor-pointer focus:outline-none">
+            <i :class="esOscuro ? 'fa-moon text-indigo-400' : 'fa-sun text-amber-500'" class="fas text-sm"></i>
         </button>
 
         <form action="{{ route('logout') }}" method="POST">

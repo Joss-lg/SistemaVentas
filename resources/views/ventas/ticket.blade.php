@@ -81,7 +81,7 @@
 
         <div>
             <p><strong>FOLIO:</strong> {{ $venta->folio }}</p>
-            <p><strong>FECHA:</strong> {{ date('d/m/Y H:i', strtotime($venta->fecha)) }}</p>
+            <p><strong>FECHA:</strong> {{ date('d/m/Y', strtotime($venta->fecha)) }}</p>
             <p><strong>CAJERO:</strong> {{ $venta->usuario->username ?? 'S/N' }}</p>
         </div>
 

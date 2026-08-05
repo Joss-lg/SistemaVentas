@@ -1,28 +1,73 @@
 export function initCajon() {
     const btn = document.getElementById('btn-abrir-cajon');
-    const { rutaCajonAbrir } = document.body.dataset;
 
     if (btn) {
-        btn.addEventListener('click', () => abrirCajonConConfirmacion(rutaCajonAbrir));
+        btn.addEventListener('click', () => abrirCajonConConfirmacion());
     }
 
     // Se expone para que el POS lo dispare tras una venta, SIN pedir confirmación
-    window.abrirCajonAutomatico = () => abrirCajonSilencioso(rutaCajonAbrir);
+    window.abrirCajonAutomatico = () => abrirCajonSilencioso();
 }
 
-function abrirCajonSilencioso(ruta) {
-    const { esAdmin } = document.body.dataset;
-    if (esAdmin !== 'true') return; // mismo criterio que tenías antes: solo dispara si es admin
+function getConfigHardware() {
+    const d = document.body.dataset;
+    return {
+        modoSimulado: d.modoSimulado === 'true',
+        impresoraNombre: d.impresoraNombre || null,
+        impresoraTipo: d.impresoraTipo || 'usb', // 'usb' | 'red'
+        impresoraIp: d.impresoraIp || null,
+        cajonComando: d.cajonComando || '27,112,0,25,250', // CSV de bytes decimales
+    };
+}
 
-    try {
-        const win = window.open(ruta, 'Cajon', 'width=1,height=1,left=0,top=0');
-        if (win) setTimeout(() => win.close(), 500);
-    } catch (e) {
-        console.warn('No se pudo abrir el cajón automáticamente:', e);
+async function conectarQZ() {
+    if (typeof qz === 'undefined') {
+        throw new Error('QZ Tray no está instalado o la librería qz-tray.js no está cargada');
+    }
+    if (!qz.websocket.isActive()) {
+        await qz.websocket.connect();
     }
 }
 
-function abrirCajonConConfirmacion(ruta) {
+function csvABytes(csv) {
+    return csv.split(',').map(n => parseInt(n.trim(), 10));
+}
+
+async function enviarComandoCajon() {
+    const { modoSimulado, impresoraNombre, impresoraTipo, impresoraIp, cajonComando } = getConfigHardware();
+
+    if (modoSimulado) {
+        console.log('[SIMULADO] Cajón abierto — comando ESC/POS habría sido enviado aquí');
+        return;
+    }
+
+    await conectarQZ();
+
+    // Si es impresora de red, QZ Tray necesita el host (IP); si es USB, necesita el nombre exacto en Windows
+    const identificador = impresoraTipo === 'red' ? impresoraIp : impresoraNombre;
+
+    if (!identificador) {
+        throw new Error(`No hay ${impresoraTipo === 'red' ? 'IP' : 'nombre'} de impresora configurado en Admin > Configuración de Hardware`);
+    }
+
+    const config = impresoraTipo === 'red'
+        ? qz.configs.create({ host: impresoraIp })
+        : qz.configs.create(impresoraNombre);
+
+    const bytes = csvABytes(cajonComando);
+    const comandoBinario = String.fromCharCode(...bytes);
+
+    await qz.print(config, [{ type: 'raw', format: 'command', data: comandoBinario }]);
+}
+
+function abrirCajonSilencioso() {
+    const { esAdmin } = document.body.dataset;
+    if (esAdmin !== 'true') return;
+
+    enviarComandoCajon().catch(e => console.warn('No se pudo abrir el cajón:', e));
+}
+
+function abrirCajonConConfirmacion() {
     const isDark = document.documentElement.classList.contains('dark');
 
     Swal.fire({
@@ -46,7 +91,7 @@ function abrirCajonConConfirmacion(ruta) {
     }).then((result) => {
         if (!result.isConfirmed) return;
 
-        fetch(ruta)
+        enviarComandoCajon()
             .then(() => {
                 Swal.fire({
                     title: 'SEÑAL ENVIADA',
@@ -60,8 +105,16 @@ function abrirCajonConConfirmacion(ruta) {
             })
             .catch(err => {
                 console.error('Error al abrir cajón:', err);
-                const win = window.open(ruta, 'Cajon', 'width=100,height=100,left=0,top=0');
-                if (win) setTimeout(() => win.close(), 500);
+                const { modoSimulado } = getConfigHardware();
+                Swal.fire({
+                    title: 'ERROR',
+                    text: modoSimulado
+                        ? 'Error simulado (revisa consola)'
+                        : 'No se pudo conectar con QZ Tray / la impresora. Verifica que QZ Tray esté abierto.',
+                    icon: 'error',
+                    background: isDark ? '#0d0d0d' : '#ffffff',
+                    color: isDark ? '#ffffff' : '#09090b'
+                });
             });
     });
 }

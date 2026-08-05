@@ -28,7 +28,7 @@
         body { font-family: 'Inter', sans-serif; }
         .font-digital { font-family: 'Orbitron', sans-serif; }
         [x-cloak] { display: none !important; }
-        
+
         /* Personalización de barras de scroll generales */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -44,18 +44,25 @@
     data-csrf="{{ csrf_token() }}"
     data-tema-actual="{{ Auth::user()->tema ?? 'claro' }}"
     data-flash-success="{{ session('success') }}"
-    data-flash-error="{{ session('error') }}"
+    data-flash-error="{{ session('error') ?? ($errors->any() ? $errors->first() : '') }}"
+    data-impresora-nombre="{{ $configHardware->impresora_nombre }}"
+    data-impresora-tipo="{{ $configHardware->impresora_tipo }}"
+    data-impresora-ip="{{ $configHardware->impresora_ip }}"
+    data-cajon-comando="{{ $configHardware->cajon_comando_apertura }}"
+    data-bascula-activada="{{ $configHardware->bascula_activada ? 'true' : 'false' }}"
+    data-bascula-baud="{{ $configHardware->bascula_baud_rate }}"
+    data-modo-simulado="{{ $configHardware->modo_simulado ? 'true' : 'false' }}"
 >
 
     {{-- WRAPPER PRINCIPAL CONTENEDOR (Fijo al 100% del viewport) --}}
     <div class="flex h-screen w-screen overflow-hidden">
-        
+
         {{-- SIDEBAR CON SCROLL INDEPENDIENTE --}}
         @include('layouts.partials.sidebar')
 
         {{-- ÁREA PRINCIPAL CON SCROLL INDEPENDIENTE --}}
         <main class="flex-1 min-w-0 h-full overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-zinc-50 dark:bg-black relative shadow-inner custom-scrollbar">
-            
+
             {{-- DECORACIÓN BACKGROUND --}}
             <div class="absolute top-0 right-0 p-12 opacity-[0.02] dark:opacity-[0.05] pointer-events-none overflow-hidden select-none">
                 <i class="fas fa-bolt text-[300px] -rotate-12"></i>

@@ -66,4 +66,14 @@ export function initBusqueda() {
         agregarAlCarrito(JSON.parse(atob(btn.dataset.seleccionarVenta)));
         cerrarModalBusqueda();
     });
+
+
+    scanner?.focus();
+
+    document.addEventListener('click', (e) => {
+        const modalAbierto = document.querySelector('[id^="modal-"]:not(.hidden)');
+        if (modalAbierto) return; // no robar foco si hay un modal abierto (ej. modal de peso)
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+        scanner?.focus();
+    });
 }

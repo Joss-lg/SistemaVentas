@@ -3,16 +3,23 @@
 @section('title', 'Movimientos de Caja')
 
 @section('content')
-<div x-data="{ tab: 'ventas', ventaAbierta: null }" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
+<div x-data="{ tab: 'ventas', ventaAbierta: null, modalGasto: false }" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
 
     {{-- ENCABEZADO --}}
-    <div class="border-b border-zinc-200 dark:border-white/5 pb-6">
-        <h2 class="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-zinc-900 dark:text-white">
-            MOVIMIENTOS DE <span class="text-red-600">CAJA</span>
-        </h2>
-        <p class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-1 ml-1">
-            Turno abierto &mdash; {{ $fechaApertura->format('d/m/Y') }}
-        </p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-6">
+        <div>
+            <h2 class="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-zinc-900 dark:text-white">
+                MOVIMIENTOS DE <span class="text-red-600">CAJA</span>
+            </h2>
+            <p class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-1 ml-1">
+                Turno abierto &mdash; {{ $fechaApertura->format('d/m/Y') }}
+            </p>
+        </div>
+        <button @click="modalGasto = true"
+            class="px-5 py-3 bg-red-600 hover:bg-red-500 text-white font-black italic uppercase text-xs tracking-widest rounded-2xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2">
+            <i class="fas fa-plus text-xs"></i>
+            <span>Registrar Gasto</span>
+        </button>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -22,7 +29,6 @@
 
             {{-- EFECTIVO ESPERADO --}}
             <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-7 rounded-3xl shadow-2xl relative overflow-hidden group">
-                {{-- Ícono decorativo: detrás de todo --}}
                 <i class="fas fa-vault absolute -right-4 -top-4 text-8xl text-zinc-100 dark:text-white/5 -rotate-12 transition-transform group-hover:rotate-0 -z-0 pointer-events-none select-none"></i>
 
                 <div class="relative z-10">
@@ -31,7 +37,6 @@
                         ${{ number_format($totalSistema, 2) }}
                     </div>
 
-                    {{-- Barra de composición --}}
                     @php
                         $baseTotal = max($montoInicial + $ventasEfectivo, 1);
                         $pctFondo = min(100, ($montoInicial / $baseTotal) * 100);
@@ -47,6 +52,9 @@
                     </div>
                     @if($totalCompras > 0)
                         <p class="text-[9px] font-bold text-red-500 uppercase mt-3 italic">- ${{ number_format($totalCompras, 2) }} en salidas a proveedores</p>
+                    @endif
+                    @if($totalGastos > 0)
+                        <p class="text-[9px] font-bold text-red-500 uppercase mt-1 italic">- ${{ number_format($totalGastos, 2) }} en gastos manuales</p>
                     @endif
                     @if(isset($totalCambio) && $totalCambio > 0)
                         <p class="text-[9px] font-bold text-zinc-400 uppercase mt-1 italic">Ya se descontaron ${{ number_format($totalCambio, 2) }} en cambios entregados</p>
@@ -93,9 +101,9 @@
                         </label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-zinc-300 dark:text-zinc-700">$</span>
-                            <input type="number" step="0.01" name="efectivo_real" id="efectivo_real" required autofocus
-                                   class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl py-4 pl-9 pr-4 text-2xl font-black text-green-600 dark:text-green-500 italic focus:outline-none focus:border-orange-500 dark:focus:border-orange-500/50 transition-all placeholder-zinc-300 dark:placeholder-zinc-800"
-                                   placeholder="0.00">
+                        <input type="number" step="0.01" name="efectivo_real" id="efectivo_real" required
+                            class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl py-4 pl-9 pr-4 text-2xl font-black text-green-600 dark:text-green-500 italic focus:outline-none focus:border-orange-500 dark:focus:border-orange-500/50 transition-all placeholder-zinc-300 dark:placeholder-zinc-800"
+                            placeholder="0.00">
                         </div>
                     </div>
 
@@ -122,6 +130,11 @@
                         class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all">
                     <i class="fas fa-truck-loading"></i> Proveedores ({{ $comprasDelTurno->count() }})
                 </button>
+                <button @click="tab = 'gastos'"
+                        :class="tab === 'gastos' ? 'bg-red-600 text-white shadow-lg' : 'text-zinc-500 hover:text-red-600'"
+                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all">
+                    <i class="fas fa-file-invoice-dollar"></i> Gastos ({{ $gastosDelTurno->count() }})
+                </button>
             </div>
 
             {{-- TAB: VENTAS DEL TURNO --}}
@@ -145,7 +158,6 @@
                                         {{ $metodo }}
                                     </span>
 
-                                    {{-- Monto recibido y cambio en el encabezado (solo si es efectivo) --}}
                                     @if($metodo == 'efectivo' && isset($v->pago_cliente))
                                         <div class="hidden sm:flex items-center space-x-2 text-[10px] font-mono text-zinc-400">
                                             <span>Recibido: <strong class="text-zinc-700 dark:text-zinc-300">${{ number_format($v->pago_cliente, 2) }}</strong></span>
@@ -159,8 +171,6 @@
                             </button>
 
                             <div x-show="ventaAbierta === {{ $v->id }}" x-collapse x-cloak class="px-4 pb-4 bg-zinc-50 dark:bg-white/[0.02]">
-                                
-                                {{-- Desglose de Pago --}}
                                 @if($metodo == 'efectivo')
                                     <div class="flex items-center justify-between my-2 p-2 bg-zinc-100 dark:bg-white/5 rounded-xl text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
                                         <div>
@@ -240,7 +250,106 @@
                     </table>
                 </div>
             </div>
+
+            {{-- TAB: GASTOS DEL TURNO --}}
+            <div x-show="tab === 'gastos'" x-cloak
+                 class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 rounded-3xl shadow-2xl overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar max-h-[640px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-zinc-50 dark:bg-[#0d0d0d] text-zinc-400 dark:text-zinc-500 uppercase text-[9px] tracking-[0.2em] border-b border-zinc-100 dark:border-white/5">
+                            <tr>
+                                <th class="p-4 pl-6 font-black">Descripción</th>
+                                <th class="p-4 font-black">Categoría</th>
+                                <th class="p-4 font-black text-center">Hora</th>
+                                <th class="p-4 pr-6 font-black text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100 dark:divide-white/5">
+                            @forelse($gastosDelTurno as $g)
+                            <tr class="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                                <td class="p-4 pl-6 font-bold italic text-zinc-800 dark:text-zinc-200">{{ $g->descripcion }}</td>
+                                <td class="p-4">
+                                    <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest {{ $g->categoria == 'INVENTARIO' ? 'bg-blue-600/10 text-blue-500 border border-blue-600/20' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/5' }}">
+                                        {{ $g->categoria }}
+                                    </span>
+                                </td>
+                                <td class="p-4 text-center text-zinc-400 dark:text-zinc-500 text-[10px] font-black uppercase">{{ $g->created_at->format('H:i') }}</td>
+                                <td class="p-4 pr-6 text-right font-black italic text-red-600 dark:text-red-500 tabular-nums">-${{ number_format($g->monto, 2) }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="4" class="p-12 text-center text-zinc-400 dark:text-zinc-600 font-bold italic uppercase text-xs">
+                                    <i class="fas fa-file-invoice-dollar text-3xl mb-3 block opacity-30"></i>
+                                    Sin gastos manuales en este turno.
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
+
+    {{-- MODAL: NUEVO GASTO --}}
+    <div x-show="modalGasto"
+         x-transition
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+
+        <div @click.away="modalGasto = false" class="bg-white dark:bg-[#121212] border border-zinc-200 dark:border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <form action="{{ route('gastos.store') }}" method="POST">
+                @csrf
+
+                <div class="p-4 border-b border-zinc-100 dark:border-white/5 flex justify-between items-center">
+                    <h3 class="text-sm font-black italic uppercase tracking-wider text-zinc-900 dark:text-white">
+                        Nuevo <span class="text-red-600">Gasto Manual</span>
+                    </h3>
+                    <button type="button" @click="modalGasto = false" class="text-zinc-400 hover:text-white text-base">&times;</button>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">
+                            Descripción del Gasto
+                        </label>
+                        <input type="text" name="descripcion" required placeholder="EJ. PAGO DE LUZ"
+                            class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-zinc-900 dark:text-white font-bold uppercase italic focus:outline-none focus:border-red-500 transition-all placeholder-zinc-300 dark:placeholder-zinc-800">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">
+                            Monto ($)
+                        </label>
+                        <input type="number" step="0.01" name="monto" required placeholder="0.00"
+                            class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-2xl font-black italic text-red-600 dark:text-red-500 focus:outline-none focus:border-red-500 transition-all placeholder-zinc-300 dark:placeholder-zinc-800">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">
+                            Categoría
+                        </label>
+                        <select name="categoria"
+                            class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-zinc-900 dark:text-white font-bold uppercase italic focus:outline-none focus:border-red-500 transition-all">
+                            <option value="GENERAL">General</option>
+                            <option value="INVENTARIO">Inventario / Mercancía</option>
+                            <option value="SERVICIOS">Servicios (Luz/Agua/Net)</option>
+                            <option value="PERSONAL">Pago Personal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-zinc-100 dark:border-white/5 flex justify-end space-x-3 bg-zinc-50 dark:bg-white/[0.01]">
+                    <button type="button" @click="modalGasto = false" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-700 dark:hover:text-white transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold italic uppercase text-xs tracking-wider rounded-xl transition-all shadow-md shadow-red-600/20 cursor-pointer">
+                        Registrar Salida
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 @endsection

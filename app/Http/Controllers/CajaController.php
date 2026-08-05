@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Compra;
 use App\Models\CorteCaja;
+use App\Models\Gasto;
 use App\Models\Venta;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -11,9 +12,6 @@ use Illuminate\Support\Facades\DB;
 
 class CajaController extends Controller
 {
-    /**
-     * Muestra el formulario de apertura de turno.
-     */
     public function aperturaIndex()
     {
         if (CorteCaja::turnoActivo(auth()->id())) {
@@ -23,9 +21,6 @@ class CajaController extends Controller
         return view('caja.apertura');
     }
 
-    /**
-     * Crea el registro del turno (abre caja).
-     */
     public function aperturaStore(Request $request)
     {
         $request->validate([
@@ -45,9 +40,6 @@ class CajaController extends Controller
         return redirect()->route('ventas.index')->with('success', 'Caja abierta correctamente.');
     }
 
-    /**
-     * Vista de movimientos del turno activo (antes AdminController::corteCaja).
-     */
     public function corteIndex()
     {
         $turno = CorteCaja::turnoActivo(auth()->id());
@@ -63,7 +55,6 @@ class CajaController extends Controller
             ->where('fecha', '>=', $fechaApertura)
             ->where('estado', '!=', 'cancelada');
 
-        // Efectivo real ingresado = lo que entregó el cliente menos el cambio que se le devolvió
         $ventasEfectivoRaw = (clone $queryVentas)->where('tipo_pago', 'efectivo')->get(['pago_cliente', 'cambio', 'total']);
 
         $ventasEfectivo = $ventasEfectivoRaw->sum(function ($v) {
@@ -84,7 +75,6 @@ class CajaController extends Controller
             ->orderBy('fecha', 'desc')
             ->get();
 
-        // Entradas de mercancía (proveedores) desde que se abrió el turno
         $comprasDelTurno = Compra::with('producto')
             ->where('created_at', '>=', $fechaApertura)
             ->orderBy('created_at', 'desc')
@@ -92,7 +82,14 @@ class CajaController extends Controller
 
         $totalCompras = $comprasDelTurno->sum('costo_total');
 
-        $totalSistema = ($montoInicial + $ventasEfectivo) - $totalCompras;
+        // Gastos manuales registrados durante este turno
+        $gastosDelTurno = Gasto::where('created_at', '>=', $fechaApertura)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $totalGastos = $gastosDelTurno->sum('monto');
+
+        $totalSistema = ($montoInicial + $ventasEfectivo) - $totalCompras - $totalGastos;
 
         return view('caja.corte', compact(
             'montoInicial',
@@ -103,15 +100,14 @@ class CajaController extends Controller
             'ventasDetalle',
             'comprasDelTurno',
             'totalCompras',
+            'gastosDelTurno',
+            'totalGastos',
             'totalSistema',
             'totalCambio',
             'fechaApertura'
         ));
     }
 
-    /**
-     * Cierra el turno activo, actualizando la misma fila (antes AdminController::guardarCorte).
-     */
     public function corteStore(Request $request)
     {
         $request->validate([
@@ -145,7 +141,9 @@ class CajaController extends Controller
             $ventasTransferencia = (clone $queryVentas)->where('tipo_pago', 'transferencia')->sum('total');
 
             $totalCompras = Compra::where('created_at', '>=', $fechaApertura)->sum('costo_total');
-            $ventasEsperadas = ($turno->monto_inicial + $ventasEfectivo) - $totalCompras;
+            $totalGastos = Gasto::where('created_at', '>=', $fechaApertura)->sum('monto');
+
+            $ventasEsperadas = ($turno->monto_inicial + $ventasEfectivo) - $totalCompras - $totalGastos;
 
             $difference = $request->efectivo_real - $ventasEsperadas;
 
