@@ -82,7 +82,7 @@
                             <div class="flex flex-col items-center">
                                 <i class="fas fa-truck-loading text-5xl text-zinc-200 dark:text-white/5 mb-4"></i>
                                 <span class="text-zinc-400 dark:text-zinc-600 italic font-black uppercase text-xs tracking-widest">
-                                    No hay registros de entradas, wey.
+                                    No hay registros de entradas.
                                 </span>
                             </div>
                         </td>

@@ -29,7 +29,7 @@
             <p class="text-2xl font-black italic text-zinc-900 dark:text-white tabular-nums">${{ number_format($corte->monto_inicial, 2) }}</p>
         </div>
         <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-5 rounded-2xl shadow-xl">
-            <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Esperado</p>
+            <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">Esperado (Cajón)</p>
             <p class="text-2xl font-black italic text-zinc-900 dark:text-white tabular-nums">${{ number_format($corte->total_esperado, 2) }}</p>
         </div>
         <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-5 rounded-2xl shadow-xl">
@@ -44,7 +44,40 @@
         </div>
     </div>
 
-    {{-- VENTAS DEL TURNO (CON FECHA Y PRODUCTOS) --}}
+    {{-- DESGLOSE DE MÉTODOS DE PAGO DEL TURNO --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-5 rounded-2xl shadow-xl flex items-center justify-between">
+            <div>
+                <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Efectivo</p>
+                <p class="text-2xl font-black italic text-emerald-600 dark:text-emerald-500 mt-1">
+                    ${{ number_format($corte->total_ventas_efectivo ?? $ventas->where('tipo_pago', 'efectivo')->sum('total'), 2) }}
+                </p>
+            </div>
+            <i class="fas fa-money-bill-wave text-3xl text-emerald-500/20"></i>
+        </div>
+
+        <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-5 rounded-2xl shadow-xl flex items-center justify-between">
+            <div>
+                <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Tarjeta</p>
+                <p class="text-2xl font-black italic text-blue-600 dark:text-blue-500 mt-1">
+                    ${{ number_format($corte->total_ventas_tarjeta ?? $ventas->where('tipo_pago', 'tarjeta')->sum('total'), 2) }}
+                </p>
+            </div>
+            <i class="fas fa-credit-card text-3xl text-blue-500/20"></i>
+        </div>
+
+        <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-5 rounded-2xl shadow-xl flex items-center justify-between">
+            <div>
+                <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Transferencia</p>
+                <p class="text-2xl font-black italic text-purple-600 dark:text-purple-500 mt-1">
+                    ${{ number_format($corte->total_transferencia ?? $ventas->where('tipo_pago', 'transferencia')->sum('total'), 2) }}
+                </p>
+            </div>
+            <i class="fas fa-mobile-alt text-3xl text-purple-500/20"></i>
+        </div>
+    </div>
+
+    {{-- VENTAS DEL TURNO --}}
     <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 rounded-3xl shadow-2xl overflow-hidden">
         <div class="p-6 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-white/[0.02]">
             <h3 class="text-xs font-black uppercase tracking-widest text-zinc-500">
@@ -57,6 +90,7 @@
                     <tr>
                         <th class="p-4 pl-6 font-black">Folio</th>
                         <th class="p-4 font-black">Fecha</th>
+                        <th class="p-4 font-black">Método</th>
                         <th class="p-4 font-black">Productos Vendidos</th>
                         <th class="p-4 pr-6 font-black text-right">Total</th>
                     </tr>
@@ -64,36 +98,45 @@
                 <tbody class="divide-y divide-zinc-100 dark:divide-white/5">
                     @forelse($ventas as $v)
                     <tr class="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                        <td class="p-4 pl-6 font-bold italic text-zinc-800 dark:text-zinc-200">#{{ $v->id }}</td>
+                        <td class="p-4 pl-6 font-bold italic text-zinc-800 dark:text-zinc-200">#{{ $v->folio ?? $v->id }}</td>
                         <td class="p-4 text-zinc-500 dark:text-zinc-400 text-xs font-bold">
                             {{ \Carbon\Carbon::parse($v->fecha)->format('d/m/Y') }}
                         </td>
+                        <td class="p-4 text-xs font-bold uppercase">
+                            @php $metodo = strtolower($v->tipo_pago ?? 'efectivo'); @endphp
+                            @if($metodo == 'tarjeta')
+                                <span class="px-2.5 py-1 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20">Tarjeta</span>
+                            @elseif($metodo == 'transferencia')
+                                <span class="px-2.5 py-1 rounded-full text-[9px] font-black bg-purple-500/10 text-purple-500 border border-purple-500/20">Transferencia</span>
+                            @else
+                                <span class="px-2.5 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Efectivo</span>
+                            @endif
+                        </td>
                         <td class="p-4 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
-                            @if(isset($v->detalles) && $v->detalles->count() > 0)
+                            @if($v->detalles && $v->detalles->count() > 0)
                                 <div class="flex flex-col gap-1">
                                     @foreach($v->detalles as $detalle)
-                                        <span class="inline-flex items-center gap-1">
-                                            <b class="text-red-500">{{ $detalle->cantidad }}x</b> 
-                                            {{ $detalle->producto->descripcion ?? ($detalle->descripcion ?? 'Producto') }}
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <b class="text-red-500 font-black">{{ $detalle->cantidad ?? 1 }}x</b> 
+                                            <span class="uppercase">
+                                                {{ $detalle->producto->descripcion ?? $detalle->descripcion ?? 'Producto' }}
+                                            </span>
                                         </span>
                                     @endforeach
                                 </div>
-                            @elseif(isset($v->productos) && $v->productos->count() > 0)
-                                {{ $v->productos->pluck('descripcion')->implode(', ') }}
                             @else
-                                <span class="text-zinc-400 italic">Sin detalle</span>
+                                <span class="text-zinc-400 italic text-[11px]">Sin detalles</span>
                             @endif
                         </td>
                         <td class="p-4 pr-6 text-right font-black italic text-emerald-600 dark:text-emerald-500 tabular-nums">${{ number_format($v->total, 2) }}</td>
                     </tr>
                     @empty
-                    <tr><td colspan="4" class="p-8 text-center text-zinc-400 dark:text-zinc-600 font-bold italic uppercase text-xs">Sin ventas en este turno.</td></tr>
+                    <tr><td colspan="5" class="p-8 text-center text-zinc-400 dark:text-zinc-600 font-bold italic uppercase text-xs">Sin ventas en este turno.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
-
 
     {{-- ENTRADAS DE MERCANCÍA DEL TURNO --}}
     <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 rounded-3xl shadow-2xl overflow-hidden">

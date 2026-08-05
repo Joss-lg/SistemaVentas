@@ -8,7 +8,8 @@ class Venta extends Model
 {
     protected $table = 'ventas';
 
-    public $timestamps = false;
+    // Habilitamos timestamps ya que la migración incluye $table->timestamps()
+    public $timestamps = true;
 
     protected $fillable = [
         'folio',
@@ -18,11 +19,25 @@ class Venta extends Model
         'subtotal',
         'descuento',
         'total',
-        'tipo_pago',        // Antes: metodo_pago
-        'referencia_pago',   // Nuevo: Para el folio de tarjeta/transferencia
-        'pago_cliente',     // Antes: monto_recibido
+        'tipo_pago',
+        'referencia_pago',
+        'pago_cliente',
         'cambio',
         'estado',
+        'cancelada_por',
+        'motivo_cancelacion',
+    ];
+
+    /**
+     * Casteo de atributos
+     */
+    protected $casts = [
+        'fecha' => 'datetime',
+        'subtotal' => 'decimal:2',
+        'descuento' => 'decimal:2',
+        'total' => 'decimal:2',
+        'pago_cliente' => 'decimal:2',
+        'cambio' => 'decimal:2',
     ];
 
     public function detalles()
@@ -32,7 +47,6 @@ class Venta extends Model
 
     public function usuario()
     {
-        // Cambiamos User::class por Usuario::class
         return $this->belongsTo(Usuario::class, 'usuario_id');
     }
 }

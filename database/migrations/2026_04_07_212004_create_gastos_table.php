@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('descripcion');
             $table->decimal('monto', 10, 2);
             $table->string('categoria')->default('MERCANCIA'); // Para separar gastos
-            $table->string('usuario')->nullable(); // Quién registró el gasto
+            $table->string('usuario')->nullable();
             $table->timestamps();
         });
     }

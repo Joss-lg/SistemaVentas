@@ -11,7 +11,7 @@
 </style>
 
 <div id="usuarios-app"
-    x-data="{ openCreate: false, openEdit: false, userEdit: { id: '', nombre: '', username: '', rol: '', permisos: [] } }"
+    x-data="{ openCreate: false, openEdit: false, userEdit: { id: '', nombre: '', username: '', rol: ''  } }"
     @abrir-modal-editar.window="userEdit = $event.detail; openEdit = true"
     class="w-full space-y-8 p-4 md:p-8 transition-colors duration-300"
     data-csrf="{{ csrf_token() }}"
@@ -48,7 +48,7 @@
                 <tbody id="tabla-usuarios" class="divide-y divide-zinc-100 dark:divide-white/5">
                     @foreach($usuarios as $user)
                         @php
-                            $userPermisos = is_array($user->permisos) ? $user->permisos : json_decode($user->permisos ?? '[]', true) ?? [];
+
                         @endphp
                         <tr class="group hover:bg-zinc-50 dark:hover:bg-white/5 cursor-pointer transition-colors"
                             data-usuario
@@ -56,7 +56,7 @@
                             data-nombre="{{ $user->nombre }}"
                             data-username="{{ $user->username }}"
                             data-rol="{{ $user->rol }}"
-                            data-permisos="{{ json_encode($userPermisos) }}"
+
                         >
                             <td class="p-5 pl-8 font-black italic text-xl uppercase text-zinc-900 dark:text-white group-hover:text-red-600 transition-colors">
                                 {{ $user->nombre }}

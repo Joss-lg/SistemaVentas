@@ -26,9 +26,14 @@ class AdminController extends Controller
         $numVentas = Venta::whereDate('fecha', now())
             ->where('estado', '!=', 'cancelada')
             ->count();
+
         $productosBajoStock = Producto::where('stock_actual', '<=', 5)->count();
 
+        $gastosHoy = Gasto::whereDate('created_at', now())->sum('monto');
+        $comprasHoy = Compra::whereDate('created_at', now())->sum('costo_total');
+
         $ultimosCortes = CorteCaja::with('usuario')
+            ->whereNotNull('fecha_cierre')
             ->orderBy('fecha_cierre', 'desc')
             ->limit(6)
             ->get();
@@ -37,6 +42,8 @@ class AdminController extends Controller
             'ventasHoy',
             'numVentas',
             'productosBajoStock',
+            'gastosHoy',
+            'comprasHoy',
             'ultimosCortes'
         ));
     }
@@ -126,71 +133,12 @@ class AdminController extends Controller
     }
 
     /**
-     * SISTEMA DE CORTE DE CAJA
-     */
-    public function corteCaja()
-    {
-        $montoInicial = session('monto_apertura', 0);
-        $hoy = today();
-
-        $ventasDelTurno = Venta::where('usuario_id', Auth::id())
-            ->whereDate('fecha', $hoy)
-            ->where('estado', '!=', 'cancelada')
-            ->sum('total');
-
-        $totalCompras = Compra::whereDate('created_at', $hoy)
-            ->sum('costo_total');
-
-        $totalSistema = ($montoInicial + $ventasDelTurno) - $totalCompras;
-
-        return view('admin.corte.index', compact('ventasDelTurno', 'montoInicial', 'totalSistema', 'totalCompras'));
-    }
-
-    public function guardarCorte(Request $request)
-    {
-        $request->validate([
-            'efectivo_real' => 'required|numeric',
-            'ventas_esperadas' => 'required|numeric',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $difference = $request->efectivo_real - $request->ventas_esperadas;
-
-            $fechaAperturaRaw = session('hora_apertura') ?? now();
-            $fechaApertura = Carbon::parse($fechaAperturaRaw)->format('Y-m-d H:i:s');
-            $fechaCierre = now()->format('Y-m-d H:i:s');
-
-            CorteCaja::create([
-                'usuario_id' => Auth::id(),
-                'fecha_apertura' => $fechaApertura,
-                'fecha_cierre' => $fechaCierre,
-                'monto_inicial' => session('monto_apertura', 0),
-                'total_ventas_efectivo' => $request->ventas_esperadas,
-                'total_ventas_tarjeta' => 0,
-                'total_esperado' => $request->ventas_esperadas,
-                'total_contado' => $request->efectivo_real,
-                'difference' => $difference,
-                'notas' => 'Corte de caja realizado',
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('logout.especial');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            dd('Error al guardar el corte: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * --- NUEVO: HISTORIAL DE CAJA ---
+     * HISTORIAL DE CAJA (solo admin — turnos ya cerrados)
      */
     public function historialCajas()
     {
         $cortes = CorteCaja::with('usuario')
+            ->whereNotNull('fecha_cierre')
             ->orderBy('fecha_cierre', 'desc')
             ->get();
 
@@ -202,17 +150,21 @@ class AdminController extends Controller
         $corte = CorteCaja::with('usuario')->findOrFail($id);
 
         $ventas = Venta::where('usuario_id', $corte->usuario_id)
-            ->whereBetween('fecha', [$corte->fecha_apertura, $corte->fecha_cierre])
+            ->where('fecha', '>=', $corte->fecha_apertura)
+            ->where('fecha', '<=', $corte->fecha_cierre)
             ->where('estado', '!=', 'cancelada')
+            ->with(['detalles.producto'])
             ->orderBy('fecha', 'desc')
             ->get();
 
-        $gastos = Gasto::whereBetween('created_at', [$corte->fecha_apertura, $corte->fecha_cierre])
+        $gastos = Gasto::where('created_at', '>=', $corte->fecha_apertura)
+            ->where('created_at', '<=', $corte->fecha_cierre)
             ->orderBy('created_at', 'desc')
             ->get();
 
         $compras = Compra::with('producto')
-            ->whereBetween('created_at', [$corte->fecha_apertura, $corte->fecha_cierre])
+            ->where('created_at', '>=', $corte->fecha_apertura)
+            ->where('created_at', '<=', $corte->fecha_cierre)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -260,7 +212,6 @@ class AdminController extends Controller
         $usuario->nombre = $request->nombre;
         $usuario->username = $request->username;
         $usuario->rol = $request->rol;
-        $usuario->permisos = $request->input('permisos', []);
 
         if ($request->filled('password')) {
             $usuario->password_hash = Hash::make($request->password);
@@ -268,7 +219,7 @@ class AdminController extends Controller
 
         $usuario->save();
 
-        return redirect()->back()->with('success', 'Datos y permisos actualizados correctamente.');
+        return redirect()->back()->with('success', 'Datos actualizados correctamente.');
     }
 
     public function destroy($id)
@@ -318,25 +269,5 @@ class AdminController extends Controller
                 ->orderBy('fecha_pausa', 'desc')
                 ->get()
         );
-    }
-
-    public function aperturaCaja(Request $request)
-    {
-        $request->validate(['monto_inicial' => 'required|numeric|min:0']);
-
-        session([
-            'turno_abierto' => true,
-            'monto_apertura' => $request->monto_inicial,
-            'hora_apertura' => now(),
-        ]);
-
-        return redirect()->back()->with('success', 'Caja abierta.');
-    }
-
-    public function cierreSesion()
-    {
-        session()->forget(['turno_abierto', 'monto_apertura', 'hora_apertura']);
-
-        return redirect()->route('admin.corte');
     }
 }

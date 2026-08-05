@@ -18,14 +18,11 @@ class Usuario extends Authenticatable
 
     protected $fillable = [
         'nombre', 'username', 'password_hash', 'rol', 'activo', 'tema',
+        
     ];
 
     protected $hidden = [
         'password_hash',
-    ];
-
-    protected $casts = [
-        'permisos' => 'array',
     ];
 
     public function ventas(): HasMany

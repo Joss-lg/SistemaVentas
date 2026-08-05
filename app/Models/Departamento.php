@@ -8,9 +8,18 @@ class Departamento extends Model
 {
     protected $table = 'departamentos';
 
-    public $timestamps = false; // Tu migración no tiene timestamps por defecto
+    // Desactiva la búsqueda de created_at y updated_at
+    public $timestamps = false;
 
-    protected $fillable = ['nombre', 'descripcion', 'activo'];
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'activo',
+    ];
+
+    protected $casts = [
+        'activo' => 'boolean',
+    ];
 
     public function productos()
     {

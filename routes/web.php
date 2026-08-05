@@ -2,26 +2,28 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CajaController;
+use App\Http\Controllers\DepartamentoController;
 use App\Http\Controllers\GastoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\VentaController;
+use App\Http\Middleware\VerificarCajaAbierta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Rutas Públicas (Sin Login)
+| Rutas Públicas & Autenticación
 |--------------------------------------------------------------------------
 */
-Route::get('/', function () {
-    return redirect()->route('login');
+Route::get('/', fn() => redirect()->route('login'));
+
+Route::controller(AuthController::class)->group(function () {
+    Route::get('/login', 'showLogin')->name('login');
+    Route::post('/login', 'login')->name('login.post');
+    Route::get('/logout-especial', 'logoutEspecial')->name('logout.especial');
 });
-
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-
-Route::get('/logout-especial', [AuthController::class, 'logoutEspecial'])->name('logout.especial');
 
 Route::post('/logout', function () {
     Auth::logout();
@@ -33,78 +35,106 @@ Route::post('/logout', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Rutas Protegidas (Requieren Login General)
+| Rutas Protegidas (General - Requiere Autenticación)
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
 
-    // --- Configuración de Usuario (Tema Oscuro) ---
+    // Ajustes de Usuario
     Route::post('/user/theme', function (Request $request) {
-        $usuario = Auth::user();
-        $usuario->update(['tema' => $request->theme]);
-
+        Auth::user()->update(['tema' => $request->theme]);
         return response()->json(['res' => 'ok', 'nuevo_tema' => $request->theme]);
     })->name('user.theme');
 
-    // --- Punto de Venta ---
-    Route::get('/ventas', [VentaController::class, 'index'])->name('ventas.index');
-    Route::post('/ventas/pausar', [VentaController::class, 'pausarVenta'])->name('ventas.pausar');
-    Route::get('/admin/ventas-espera/listar', [AdminController::class, 'listarVentasEspera']);
-    Route::get('/admin/ventas-espera/recuperar/{id}', [VentaController::class, 'recuperarVenta']);
-    Route::get('/ventas/buscar-producto', [VentaController::class, 'buscarProducto'])->name('ventas.buscar');
-    Route::get('/ventas/buscar-nombre', [VentaController::class, 'buscarPorNombre'])->name('ventas.buscarNombre');
-    Route::post('/ventas/finalizar', [VentaController::class, 'finalizarVenta'])->name('ventas.finalizar');
-    Route::get('/ventas/ticket/{id}', [VentaController::class, 'imprimirTicket'])->name('ventas.ticket');
-
-    // --- Inventario Cajero ---
-    Route::get('/ventas/inventario', [AdminController::class, 'inventarioCajero'])->name('ventas.inventario');
-    Route::post('/inventario/agregar-stock', [InventarioController::class, 'agregarStock'])->name('inventario.agregar-stock');
-
-    Route::get('/admin/impresion/abrir-cajon', function () {
-        return view('admin.impresion.abrir_cajon');
-    })->name('impresion.abrir-cajon');
-
-    // --- Corte y Apertura de Caja ---
-    Route::get('/admin/corte', [AdminController::class, 'corteCaja'])->name('admin.corte');
-    Route::post('/admin/corte/guardar', [AdminController::class, 'guardarCorte'])->name('admin.corte.store');
-    Route::post('/admin/caja/apertura', [AdminController::class, 'aperturaCaja'])->name('caja.apertura');
+    /*
+    |--------------------------------------------------------------------------
+    | MÓDULO DE CAJA (Apertura de Turno)
+    |--------------------------------------------------------------------------
+    | Sin middleware caja.abierta porque es justo lo que abre el turno.
+    */
+    Route::prefix('caja')->name('caja.')->controller(CajaController::class)->group(function () {
+        Route::get('/apertura', 'aperturaIndex')->name('apertura');
+        Route::post('/apertura', 'aperturaStore')->name('apertura.store');
+    });
 
     /*
     |--------------------------------------------------------------------------
-    | Rutas de Solo Administrador
+    | Rutas que requieren turno de caja abierto (cajeros; admins exentos)
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['soloAdmin'])->group(function () {
+    Route::middleware(['caja.abierta'])->group(function () {
+
+        // Punto de Venta (POS)
+        Route::prefix('ventas')->name('ventas.')->controller(VentaController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/pausar', 'pausarVenta')->name('pausar');
+            Route::get('/buscar-producto', 'buscarProducto')->name('buscar');
+            Route::get('/buscar-nombre', 'buscarPorNombre')->name('buscarNombre');
+            Route::post('/finalizar', 'finalizarVenta')->name('finalizar');
+            Route::get('/ticket/{id}', 'imprimirTicket')->name('ticket');
+            Route::get('/recuperar/{id}', 'recuperarVenta')->name('recuperar');
+        });
+
+        // Inventario para Cajeros
+        Route::get('/ventas/inventario', [AdminController::class, 'inventarioCajero'])->name('ventas.inventario');
+        Route::post('/inventario/agregar-stock', [InventarioController::class, 'agregarStock'])->name('inventario.agregar-stock');
+
+        // Impresión / Cajón
+        Route::get('/admin/impresion/abrir-cajon', fn() => view('admin.impresion.abrir_cajon'))->name('impresion.abrir-cajon');
+
+        // Corte de Caja (Cajero) — ahora vive en CajaController
+        Route::get('/admin/corte', [CajaController::class, 'corteIndex'])->name('admin.corte');
+        Route::post('/admin/corte/guardar', [CajaController::class, 'corteStore'])->name('admin.corte.store');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rutas Exclusivas de Administrador
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['soloAdmin'])->prefix('admin')->group(function () {
 
         // Dashboard
-        Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
-        // CRUD de Productos
-        Route::get('/admin/productos', [AdminController::class, 'productos'])->name('productos.index');
-        Route::post('/admin/productos', [AdminController::class, 'storeProducto'])->name('productos.store');
-        Route::put('/admin/productos/{id}', [AdminController::class, 'updateProducto'])->name('productos.update');
-        Route::delete('/admin/productos/{id}', [AdminController::class, 'destroyProducto'])->name('productos.destroy');
+        // CRUD Productos
+        Route::prefix('productos')->name('productos.')->controller(AdminController::class)->group(function () {
+            Route::get('/', 'productos')->name('index');
+            Route::post('/', 'storeProducto')->name('store');
+            Route::put('/{id}', 'updateProducto')->name('update');
+            Route::delete('/{id}', 'destroyProducto')->name('destroy');
+        });
 
-        // CRUD de Usuarios / Cajeros
-        Route::get('/admin/usuarios', [AdminController::class, 'usuariosIndex'])->name('admin.usuarios.index');
-        Route::post('/admin/usuarios/guardar', [AdminController::class, 'usuariosStore'])->name('admin.usuarios.store');
-        Route::put('/admin/usuarios/{id}', [AdminController::class, 'updateUsuario'])->name('admin.usuarios.update');
-        Route::delete('/admin/usuarios/{id}', [AdminController::class, 'destroy'])->name('admin.usuarios.destroy');
+        // CRUD Departamentos
+        Route::resource('departamentos', DepartamentoController::class)->except(['create', 'edit', 'show']);
 
-        // Reportes, Compras y Flujo de caja
-        Route::get('/admin/reportes', [AdminController::class, 'reportes'])->name('admin.reportes');
-        Route::get('/admin/gastos', [GastoController::class, 'index'])->name('admin.gastos');
-        Route::post('/admin/gastos', [GastoController::class, 'store'])->name('gastos.store');
-        Route::get('/admin/compras', [AdminController::class, 'historialCompras'])->name('admin.compras.index');
-        Route::get('/admin/reporte-excel-general', [GastoController::class, 'descargarReporte'])->name('admin.reporte.excel');
+        // CRUD Usuarios / Cajeros
+        Route::prefix('usuarios')->name('admin.usuarios.')->controller(AdminController::class)->group(function () {
+            Route::get('/', 'usuariosIndex')->name('index');
+            Route::post('/guardar', 'usuariosStore')->name('store');
+            Route::put('/{id}', 'updateUsuario')->name('update');
+            Route::delete('/{id}', 'destroy')->name('destroy');
+        });
 
-        // --- NUEVO: Historial de Caja ---
-        Route::get('/admin/cajas', [AdminController::class, 'historialCajas'])->name('admin.cajas.index');
-        Route::get('/admin/cajas/{id}', [AdminController::class, 'detalleCaja'])->name('admin.cajas.show');
+        // Gastos y Compras
+        Route::get('/gastos', [GastoController::class, 'index'])->name('admin.gastos');
+        Route::post('/gastos', [GastoController::class, 'store'])->name('gastos.store');
+        Route::get('/compras', [AdminController::class, 'historialCompras'])->name('admin.compras.index');
 
-        // Acciones de Control
-        Route::delete('/admin/ventas/cancelar/{id}', [AdminController::class, 'cancelarVenta'])->name('ventas.cancelar');
-        Route::get('/admin/abrir-cajon-manual', [VentaController::class, 'abrirCajonManual'])->name('admin.cajon.abrir');
+        // Historial y Detalle de Cajas
+        Route::prefix('cajas')->name('admin.cajas.')->controller(AdminController::class)->group(function () {
+            Route::get('/', 'historialCajas')->name('index');
+            Route::get('/{id}', 'detalleCaja')->name('show');
+        });
+
+        // Reportes
+        Route::get('/reportes', [AdminController::class, 'reportes'])->name('admin.reportes');
+        Route::get('/reporte-excel-general', [GastoController::class, 'descargarReporte'])->name('admin.reporte.excel');
+
+        // Ventas en espera & Acciones de Control
+        Route::get('/ventas-espera/listar', [AdminController::class, 'listarVentasEspera'])->name('admin.ventas.espera');
+        Route::delete('/ventas/cancelar/{id}', [AdminController::class, 'cancelarVenta'])->name('ventas.cancelar');
+        Route::get('/abrir-cajon-manual', [VentaController::class, 'abrirCajonManual'])->name('admin.cajon.abrir');
         Route::post('/ventas/sincronizar-offline', [VentaController::class, 'sincronizar'])->name('admin.ventas.sincronizar');
     });
 });

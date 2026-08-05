@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('usuarios', function (Blueprint $table) {
@@ -21,7 +18,6 @@ return new class extends Migration
             $table->enum('tema', ['claro', 'oscuro'])->default('claro');
 
             $table->timestamp('fecha_creacion')->useCurrent();
-            $table->json('permisos')->nullable();
             $table->timestamp('ultima_sesion')->nullable();
         });
     }

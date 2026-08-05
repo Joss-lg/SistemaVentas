@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\SoloAdmin;
 use App\Http\Middleware\VerificarPermiso;
+use \App\Http\Middleware\VerificarCajaAbierta;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'soloAdmin' => SoloAdmin::class,
             'permiso' => VerificarPermiso::class,
+            'caja.abierta' => VerificarCajaAbierta::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

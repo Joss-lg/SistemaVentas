@@ -6,7 +6,13 @@
     <title>F1 SISTEMA - @yield('title')</title>
 
     <script>
-        document.documentElement.classList.toggle('dark', "{{ Auth::user()->tema ?? 'claro' }}" === 'oscuro');
+        (function () {
+            const guardado = localStorage.getItem('theme');
+            const esOscuro = guardado
+                ? guardado === 'dark'
+                : ("{{ Auth::user()->tema ?? 'claro' }}" === 'oscuro');
+            document.documentElement.classList.toggle('dark', esOscuro);
+        })();
     </script>
 
     <script src="{{ asset('js/sweetalert2.js') }}"></script>
@@ -18,7 +24,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700&family=Inter:wght=400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .font-digital { font-family: 'Orbitron', sans-serif; }
         [x-cloak] { display: none !important; }
@@ -37,6 +43,8 @@
     data-ruta-ventas-index="{{ route('ventas.index') }}"
     data-csrf="{{ csrf_token() }}"
     data-tema-actual="{{ Auth::user()->tema ?? 'claro' }}"
+    data-flash-success="{{ session('success') }}"
+    data-flash-error="{{ session('error') }}"
 >
 
     {{-- WRAPPER PRINCIPAL CONTENEDOR (Fijo al 100% del viewport) --}}
@@ -62,10 +70,6 @@
 
     </div>
 
-    {{-- MODAL DE APERTURA DE CAJA --}}
-    @if(!session('turno_abierto'))
-        @include('layouts.partials.modal-apertura-caja')
-    @endif
 
     {{-- STACKS PARA MODALES Y SCRIPTS SECUNDARIOS --}}
     @stack('modals')

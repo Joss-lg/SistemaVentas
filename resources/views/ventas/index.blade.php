@@ -53,7 +53,7 @@
             <label class="block text-red-600 text-[10px] font-black mb-2 uppercase tracking-[0.4em]">Escáner de Código</label>
             <input type="text" id="scanner" autofocus autocomplete="off"
                 class="w-full bg-zinc-100 dark:bg-black border-b-2 border-red-600 text-red-600 dark:text-red-500 text-4xl p-3 focus:outline-none font-black placeholder-zinc-300 dark:placeholder-zinc-900 transition-all focus:bg-red-600/5 rounded-t-lg"
-                placeholder="|||||||||||||">
+                placeholder="||||||||||||||||||||||">
         </div>
 
         {{-- TOTAL --}}
