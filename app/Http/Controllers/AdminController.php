@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Compra;
 use App\Models\CorteCaja;
 use App\Models\Gasto;
+use App\Models\Permission;
 use App\Models\Producto;
 use App\Models\Usuario;
 use App\Models\Venta;
@@ -138,8 +139,8 @@ class AdminController extends Controller
     public function historialCajas()
     {
         $cortes = CorteCaja::with('usuario')
-            ->whereNotNull('fecha_cierre')
-            ->orderBy('fecha_cierre', 'desc')
+            ->orderByRaw('fecha_cierre IS NULL DESC') 
+            ->orderBy('fecha_apertura', 'desc')
             ->get();
 
         return view('admin.cajas.index', compact('cortes'));
@@ -149,22 +150,25 @@ class AdminController extends Controller
     {
         $corte = CorteCaja::with('usuario')->findOrFail($id);
 
+        // Si la caja sigue abierta, usamos "ahora" como límite superior
+        $fechaLimite = $corte->fecha_cierre ?? now();
+
         $ventas = Venta::where('usuario_id', $corte->usuario_id)
             ->where('fecha', '>=', $corte->fecha_apertura)
-            ->where('fecha', '<=', $corte->fecha_cierre)
+            ->where('fecha', '<=', $fechaLimite)
             ->where('estado', '!=', 'cancelada')
             ->with(['detalles.producto'])
             ->orderBy('fecha', 'desc')
             ->get();
 
         $gastos = Gasto::where('created_at', '>=', $corte->fecha_apertura)
-            ->where('created_at', '<=', $corte->fecha_cierre)
+            ->where('created_at', '<=', $fechaLimite)
             ->orderBy('created_at', 'desc')
             ->get();
 
         $compras = Compra::with('producto')
             ->where('created_at', '>=', $corte->fecha_apertura)
-            ->where('created_at', '<=', $corte->fecha_cierre)
+            ->where('created_at', '<=', $fechaLimite)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -173,7 +177,8 @@ class AdminController extends Controller
 
     public function usuariosIndex()
     {
-        $usuarios = Usuario::all();
+        // Cargamos los slugs de permisos de cada usuario para pintar el checklist ya marcado al editar
+        $usuarios = Usuario::with('permissions')->get();
 
         return view('admin.usuarios.index', compact('usuarios'));
     }
@@ -185,15 +190,20 @@ class AdminController extends Controller
             'username' => 'required|string|unique:usuarios,username',
             'password' => 'required|min:4',
             'rol' => 'required',
+            'permisos' => 'nullable|array',
+            'permisos.*' => 'string|exists:permissions,slug',
         ]);
 
-        Usuario::create([
+        $usuario = Usuario::create([
             'nombre' => $request->nombre,
             'username' => $request->username,
             'password_hash' => Hash::make($request->password),
             'rol' => $request->rol,
             'activo' => 1,
         ]);
+
+        $idsPermisos = Permission::whereIn('slug', $request->permisos ?? [])->pluck('id');
+        $usuario->permissions()->sync($idsPermisos);
 
         return redirect()->back()->with('success', 'Nuevo usuario registrado.');
     }
@@ -207,6 +217,8 @@ class AdminController extends Controller
             'username' => 'required|string|unique:usuarios,username,'.$id,
             'password' => 'nullable|min:4',
             'rol' => 'required',
+            'permisos' => 'nullable|array',
+            'permisos.*' => 'string|exists:permissions,slug',
         ]);
 
         $usuario->nombre = $request->nombre;
@@ -218,6 +230,9 @@ class AdminController extends Controller
         }
 
         $usuario->save();
+
+        $idsPermisos = Permission::whereIn('slug', $request->permisos ?? [])->pluck('id');
+        $usuario->permissions()->sync($idsPermisos);
 
         return redirect()->back()->with('success', 'Datos actualizados correctamente.');
     }

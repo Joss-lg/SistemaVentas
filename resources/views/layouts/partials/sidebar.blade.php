@@ -1,11 +1,17 @@
 @php
     $userRol = strtolower(Auth::user()->rol ?? '');
     $esAdmin = ($userRol === 'admin' || $userRol === 'administrador');
-
-    $puedeVerInventario = $esAdmin || $userRol === 'cajero';
+    $user = Auth::user();
 
     $active = "bg-red-600 text-white shadow-[0_6px_14px_rgba(220,38,38,0.3)]";
     $inactive = "text-zinc-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5";
+
+    // El admin siempre pasa (bypass en Usuario::tienePermiso()); esto solo decide
+    // si mostramos el encabezado "Administración" para un cajero con al menos un permiso admin.
+    $tieneAlgoAdmin = $esAdmin || collect([
+        'dashboard.ver', 'departamentos.gestionar', 'productos.gestionar',
+        'caja.historial', 'reportes.ver', 'compras.ver', 'hardware.configurar', 'usuarios.gestionar',
+    ])->contains(fn($slug) => $user->tienePermiso($slug));
 @endphp
 
 <style>
@@ -55,7 +61,7 @@
 
     {{-- NAVEGACIÓN --}}
     <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto overflow-x-hidden no-scrollbar pt-4">
-        @if($esAdmin)
+        @if($user->tienePermiso('cajon.abrir'))
         <button id="btn-abrir-cajon"
             :title="colapsado ? 'Abrir Cajón' : ''"
             class="w-full flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all border border-yellow-600/30 text-yellow-600 hover:bg-yellow-600 hover:text-white group mb-3 cursor-pointer"
@@ -67,15 +73,15 @@
 
         <p x-show="!colapsado" x-transition class="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 ml-1 border-b border-zinc-100 dark:border-white/5 pb-1 whitespace-nowrap">Operación</p>
 
-        @if(!$esAdmin)
-            <a href="{{ route('caja.apertura') }}"
-                :title="colapsado ? 'Apertura de Caja' : ''"
-                :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('caja.apertura') ? "'$active'" : "'$inactive'" }}]"
-                class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
-                <i class="fas fa-door-open text-sm flex-shrink-0"></i>
-                <span x-show="!colapsado" x-transition class="whitespace-nowrap">Apertura de Caja</span>
-            </a>
-        @endif
+    @if(!$esAdmin && !\App\Models\CorteCaja::turnoActivo(Auth::id()))
+        <a href="{{ route('caja.apertura') }}"
+            :title="colapsado ? 'Apertura de Caja' : ''"
+            :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('caja.apertura') ? "'$active'" : "'$inactive'" }}]"
+            class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+            <i class="fas fa-door-open text-sm flex-shrink-0"></i>
+            <span x-show="!colapsado" x-transition class="whitespace-nowrap">Apertura de Caja</span>
+        </a>
+    @endif
 
         <a href="{{ route('ventas.index') }}"
             :title="colapsado ? 'Punto de Venta' : ''"
@@ -85,7 +91,7 @@
             <span x-show="!colapsado" x-transition class="whitespace-nowrap">Punto de Venta</span>
         </a>
 
-        @if(!$esAdmin && $puedeVerInventario)
+        @if(!$esAdmin && $user->tienePermiso('inventario.ver'))
             <a href="{{ route('ventas.inventario') }}"
                 :title="colapsado ? 'Inventario' : ''"
                 :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('ventas.inventario') ? "'$active'" : "'$inactive'" }}]"
@@ -100,59 +106,75 @@
             :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.corte') ? "'$active'" : "'$inactive'" }}]"
             class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
             <i class="fas fa-calculator text-sm flex-shrink-0"></i>
-            <span x-show="!colapsado" x-transition class="whitespace-nowrap">Corte de Caja</span>
+            <span x-show="!colapsado" x-transition class="whitespace-nowrap">Flujo de caja</span>
         </a>
 
-        @if($esAdmin)
+        @if($tieneAlgoAdmin)
             <div class="pt-3 mt-3 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
                 <p x-show="!colapsado" x-transition class="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-2 ml-1 whitespace-nowrap">Administración</p>
 
+                @if($user->tienePermiso('dashboard.ver'))
                 <a href="{{ route('admin.dashboard') }}" :title="colapsado ? 'Dashboard' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.dashboard') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-chart-pie text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Dashboard</span>
                 </a>
+                @endif
 
                 {{-- DEPARTAMENTOS --}}
+                @if($user->tienePermiso('departamentos.gestionar'))
                 <a href="{{ route('departamentos.index') }}" :title="colapsado ? 'Categoría' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('departamentos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-tag text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Categoría</span>
                 </a>
+                @endif
 
                 {{-- PRODUCTOS --}}
+                @if($user->tienePermiso('productos.gestionar'))
                 <a href="{{ route('productos.index') }}" :title="colapsado ? 'Productos' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('productos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-box text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Productos</span>
                 </a>
+                @endif
 
                 {{-- HISTORIAL DE CAJA --}}
+                @if($user->tienePermiso('caja.historial'))
                 <a href="{{ route('admin.cajas.index') }}" :title="colapsado ? 'Historial de Caja' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.cajas.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-history text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Historial de Caja</span>
                 </a>
+                @endif
 
                 {{-- REPORTES GENERAL --}}
+                @if($user->tienePermiso('reportes.ver'))
                 <a href="{{ route('admin.reportes') }}" :title="colapsado ? 'Reportes General' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.reportes') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-chart-bar text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Reportes General</span>
                 </a>
+                @endif
 
                 {{-- COMPRAS --}}
+                @if($user->tienePermiso('compras.ver'))
                 <a href="{{ route('admin.compras.index') }}" :title="colapsado ? 'Compras' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.compras.index') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-shopping-bag text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Proveedores</span>
                 </a>
+                @endif
 
                 {{-- CONFIGURACIÓN DE HARDWARE --}}
+                @if($user->tienePermiso('hardware.configurar'))
                 <a href="{{ route('admin.hardware.edit') }}" :title="colapsado ? 'Config. Hardware' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.hardware.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-microchip text-sm flex-shrink-0"></i>
-                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Config. Hardware</span>
+                    <span x-show="!colapsado" x-transition class="whitespace-nowrap">Configuracion</span>
                 </a>
+                @endif
 
                 {{-- GESTIONAR CAJEROS --}}
+                @if($user->tienePermiso('usuarios.gestionar'))
                 <a href="{{ route('admin.usuarios.index') }}" :title="colapsado ? 'Gestionar Cajeros' : ''" :class="[colapsado ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.usuarios.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                     <i class="fas fa-users-cog text-sm flex-shrink-0"></i>
                     <span x-show="!colapsado" x-transition class="whitespace-nowrap">Gestionar Cajeros</span>
                 </a>
+                @endif
             </div>
         @endif
 

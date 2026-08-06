@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -17,8 +18,12 @@ class Usuario extends Authenticatable
     public $timestamps = false;
 
     protected $fillable = [
-        'nombre', 'username', 'password_hash', 'rol', 'activo', 'tema',
-        
+        'nombre',
+        'username',
+        'password_hash',
+        'rol',
+        'activo',
+        'tema',
     ];
 
     protected $hidden = [
@@ -30,9 +35,28 @@ class Usuario extends Authenticatable
         return $this->hasMany(Venta::class, 'usuario_id');
     }
 
+    public function permissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'usuario_permiso', 'usuario_id', 'permission_id');
+    }
+
     public function esAdmin(): bool
     {
-        return $this->rol === 'administrador';
+        $rol = strtolower($this->rol ?? '');
+        return $rol === 'admin' || $rol === 'administrador';
+    }
+
+    /**
+     * Verifica si el usuario cuenta con un permiso específico (individual, no por rol).
+     */
+    public function tienePermiso(string $slug): bool
+    {
+        // Super admin: bypass total
+        if ($this->esAdmin()) {
+            return true;
+        }
+
+        return $this->permissions()->where('slug', $slug)->exists();
     }
 
     public function getAuthPassword()

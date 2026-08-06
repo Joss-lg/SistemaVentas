@@ -1,5 +1,5 @@
 <div x-show="openCreate" x-cloak class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
-    <div class="bg-white dark:bg-[#0d0d0d] w-full max-w-md rounded-3xl p-6 md:p-8 shadow-2xl border border-zinc-200 dark:border-white/10" @click.away="openCreate = false">
+    <div class="bg-white dark:bg-[#0d0d0d] w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl p-6 md:p-8 shadow-2xl border border-zinc-200 dark:border-white/10" @click.away="openCreate = false">
         
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-100 dark:border-white/5">
             <h2 class="text-2xl font-black italic uppercase text-zinc-900 dark:text-white">
@@ -40,6 +40,8 @@
                 <input type="password" name="password" placeholder="••••••••" required 
                     class="w-full bg-zinc-50 dark:bg-black p-3.5 rounded-xl text-zinc-900 dark:text-white font-mono text-sm border border-zinc-200 dark:border-white/10 focus:border-red-600 dark:focus:border-red-600 outline-none transition-colors">
             </div>
+
+        <x-usuarios.checkboxes-permisos />
 
             <div class="flex items-center gap-3 pt-4">
                 <button type="button" @click="openCreate = false" 

@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UsuariosSeeder::class,
             ConfiguracionHardwareSeeder::class,
+            PermissionSeeder::class,
         ]);
     }
 }

@@ -3,33 +3,37 @@ function getConfig() {
     return app ? app.dataset : {};
 }
 
-function abrirPanelGestion(id, nombre, username, rol, permisos) {
-    const isDark = document.documentElement.classList.contains('dark');
-    const permisosJson = JSON.stringify(permisos).replace(/"/g, '&quot;');
+    function abrirPanelGestion(id, nombre, username, rol, permisos) {
+        const isDark = document.documentElement.classList.contains('dark');
+        const permisosJson = JSON.stringify(permisos).replace(/"/g, '&quot;');
 
-    Swal.fire({
-        title: 'GESTIÓN DE OPERATIVO',
-        html: `<p class="text-red-600 font-black text-xl italic uppercase">${nombre}</p>`,
-        background: isDark ? '#0d0d0d' : '#ffffff',
-        color: isDark ? '#ffffff' : '#09090b',
-        showConfirmButton: false,
-        showCloseButton: true,
-        customClass: { popup: 'rounded-[2.5rem] border-2 border-zinc-200 dark:border-white/10 shadow-2xl p-8' },
-        footer: `
-            <div class="flex flex-col w-full gap-3 p-4">
-                <button data-editar-usuario='${id}|${nombre}|${username}|${rol}|${permisosJson}'
-                    class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl text-[10px] uppercase italic border-b-4 border-blue-800">
-                    EDITAR PERFIL
-                </button>
-                ${id != getConfig().userIdActual ? `
-                <button data-baja-usuario="${id}"
-                    class="w-full bg-transparent border-2 border-red-600 text-red-600 font-black py-5 rounded-2xl text-[10px] uppercase italic">
-                    DAR DE BAJA
-                </button>` : ''}
-            </div>
-        `
-    });
-}
+        Swal.fire({
+            title: 'GESTIÓN DE OPERATIVO',
+            html: `
+                <p class="text-red-600 font-black text-xl italic uppercase">${nombre}</p>
+                <div class="flex flex-col w-full gap-3 mt-6">
+                    <button data-editar-usuario='${id}|${nombre}|${username}|${rol}|${permisosJson}'
+                        class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl text-[10px] uppercase italic border-b-4 border-blue-800 focus:outline-none">
+                        EDITAR PERFIL
+                    </button>
+                    ${id != getConfig().userIdActual ? `
+                    <button data-baja-usuario="${id}"
+                        class="w-full bg-transparent border-2 border-red-600 text-red-600 font-black py-5 rounded-2xl text-[10px] uppercase italic focus:outline-none">
+                        DAR DE BAJA
+                    </button>` : ''}
+                </div>
+            `,
+            background: isDark ? '#0d0d0d' : '#ffffff',
+            color: isDark ? '#ffffff' : '#09090b',
+            showConfirmButton: false,
+            showCloseButton: true,
+            focusConfirm: false,
+            didOpen: (popup) => {
+                popup.querySelector('button')?.blur();
+            },
+            customClass: { popup: 'rounded-[2.5rem] border-2 border-zinc-200 dark:border-white/10 shadow-2xl p-8' }
+        });
+    }
 
 function dispararEdicion(id, nombre, username, rol, permisosJson) {
     Swal.close();

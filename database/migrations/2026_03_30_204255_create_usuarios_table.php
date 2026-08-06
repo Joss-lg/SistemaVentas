@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('nombre', 100);
             $table->string('username', 50)->unique();
             $table->string('password_hash', 255);
-            $table->enum('rol', ['administrador', 'cajero', 'supervisor']);
+            $table->enum('rol', ['administrador', 'cajero']);
             $table->boolean('activo')->default(true);
             $table->enum('tema', ['claro', 'oscuro'])->default('claro');
 

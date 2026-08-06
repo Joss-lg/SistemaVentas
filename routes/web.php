@@ -51,7 +51,6 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     | MÓDULO DE CAJA (Apertura de Turno)
     |--------------------------------------------------------------------------
-    | Sin middleware caja.abierta porque es justo lo que abre el turno.
     */
     Route::prefix('caja')->name('caja.')->controller(CajaController::class)->group(function () {
         Route::get('/apertura', 'aperturaIndex')->name('apertura');
@@ -76,70 +75,97 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/recuperar/{id}', 'recuperarVenta')->name('recuperar');
         });
 
-        // Inventario para Cajeros
-        Route::get('/ventas/inventario', [AdminController::class, 'inventarioCajero'])->name('ventas.inventario');
+        // Inventario para Cajeros (solo lectura)
+        Route::get('/ventas/inventario', [AdminController::class, 'inventarioCajero'])
+            ->name('ventas.inventario')
+            ->middleware('permiso:inventario.ver');
+
         Route::post('/inventario/agregar-stock', [InventarioController::class, 'agregarStock'])->name('inventario.agregar-stock');
 
-        // Impresión / Cajón
+        // Impresión / Cajón (vista vieja de window.print, sin permiso especial)
         Route::get('/admin/impresion/abrir-cajon', fn() => view('admin.impresion.abrir_cajon'))->name('impresion.abrir-cajon');
 
-        // Corte de Caja (Cajero) — ahora vive en CajaController
+        // Corte de Caja — cualquier cajero con turno abierto
         Route::get('/admin/corte', [CajaController::class, 'corteIndex'])->name('admin.corte');
         Route::post('/admin/corte/guardar', [CajaController::class, 'corteStore'])->name('admin.corte.store');
+
+        // Gastos manuales del turno — se movió aquí desde soloAdmin, cualquier cajero con turno abierto lo usa
+        Route::post('/admin/gastos', [GastoController::class, 'store'])->name('gastos.store');
     });
 
     /*
     |--------------------------------------------------------------------------
-    | Rutas Exclusivas de Administrador
+    | CRUD Productos — por permiso, no exclusivo de soloAdmin
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('admin/productos')->name('productos.')->controller(AdminController::class)->group(function () {
+        Route::get('/', 'productos')->name('index')->middleware('permiso:productos.gestionar');
+        Route::post('/', 'storeProducto')->name('store')->middleware('permiso:productos.gestionar');
+        Route::put('/{id}', 'updateProducto')->name('update')->middleware('permiso:productos.gestionar');
+        Route::delete('/{id}', 'destroyProducto')->name('destroy')->middleware('permiso:productos.gestionar');
+    });
+
+    // Departamentos / Categorías — por permiso
+    Route::middleware('permiso:departamentos.gestionar')->group(function () {
+        Route::resource('admin/departamentos', DepartamentoController::class)
+            ->except(['create', 'edit', 'show'])
+            ->parameters(['departamentos' => 'departamento'])
+            ->names('departamentos');
+    });
+
+    // Abrir cajón manual — por permiso
+    Route::get('/abrir-cajon-manual', [VentaController::class, 'abrirCajonManual'])
+        ->name('admin.cajon.abrir')
+        ->middleware('permiso:cajon.abrir');
+
+    // Historial y Detalle de Cajas — por permiso
+    Route::prefix('admin/cajas')->name('admin.cajas.')->controller(AdminController::class)->group(function () {
+        Route::get('/', 'historialCajas')->name('index')->middleware('permiso:caja.historial');
+        Route::get('/{id}', 'detalleCaja')->name('show')->middleware('permiso:caja.detalle');
+    });
+
+    // Compras — por permiso
+    Route::get('/admin/compras', [AdminController::class, 'historialCompras'])
+        ->name('admin.compras.index')
+        ->middleware('permiso:compras.ver');
+
+    // Reportes — por permiso
+    Route::get('/admin/reportes', [AdminController::class, 'reportes'])
+        ->name('admin.reportes')
+        ->middleware('permiso:reportes.ver');
+
+    Route::get('/admin/reporte-excel-general', [GastoController::class, 'descargarReporte'])
+        ->name('admin.reporte.excel')
+        ->middleware('permiso:reportes.descargar');
+
+    // Dashboard — por permiso
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
+        ->name('admin.dashboard')
+        ->middleware('permiso:dashboard.ver');
+
+    // Usuarios / Cajeros — por permiso (incluye asignar permisos)
+    Route::prefix('admin/usuarios')->name('admin.usuarios.')->controller(AdminController::class)->middleware('permiso:usuarios.gestionar')->group(function () {
+        Route::get('/', 'usuariosIndex')->name('index');
+        Route::post('/guardar', 'usuariosStore')->name('store');
+        Route::put('/{id}', 'updateUsuario')->name('update');
+        Route::delete('/{id}', 'destroy')->name('destroy');
+    });
+
+    // Configuración de Hardware — por permiso
+    Route::middleware('permiso:hardware.configurar')->group(function () {
+        Route::get('/admin/configuracion-hardware', [ConfiguracionHardwareController::class, 'edit'])->name('admin.hardware.edit');
+        Route::put('/admin/configuracion-hardware', [ConfiguracionHardwareController::class, 'update'])->name('admin.hardware.update');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rutas que se quedan exclusivas de soloAdmin (no están en la lista de
+    | permisos — control operativo de ventas, no gestión administrativa)
     |--------------------------------------------------------------------------
     */
     Route::middleware(['soloAdmin'])->prefix('admin')->group(function () {
-
-        // Dashboard
-        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-
-        // CRUD Productos
-        Route::prefix('productos')->name('productos.')->controller(AdminController::class)->group(function () {
-            Route::get('/', 'productos')->name('index');
-            Route::post('/', 'storeProducto')->name('store');
-            Route::put('/{id}', 'updateProducto')->name('update');
-            Route::delete('/{id}', 'destroyProducto')->name('destroy');
-        });
-
-        // CRUD Departamentos
-        Route::resource('departamentos', DepartamentoController::class)->except(['create', 'edit', 'show']);
-
-        // CRUD Usuarios / Cajeros
-        Route::prefix('usuarios')->name('admin.usuarios.')->controller(AdminController::class)->group(function () {
-            Route::get('/', 'usuariosIndex')->name('index');
-            Route::post('/guardar', 'usuariosStore')->name('store');
-            Route::put('/{id}', 'updateUsuario')->name('update');
-            Route::delete('/{id}', 'destroy')->name('destroy');
-        });
-
-        // Gastos y Compras
-
-        Route::post('/gastos', [GastoController::class, 'store'])->name('gastos.store');
-        Route::get('/compras', [AdminController::class, 'historialCompras'])->name('admin.compras.index');
-
-        // Historial y Detalle de Cajas
-        Route::prefix('cajas')->name('admin.cajas.')->controller(AdminController::class)->group(function () {
-            Route::get('/', 'historialCajas')->name('index');
-            Route::get('/{id}', 'detalleCaja')->name('show');
-        });
-
-        // Reportes
-        Route::get('/reportes', [AdminController::class, 'reportes'])->name('admin.reportes');
-        Route::get('/reporte-excel-general', [GastoController::class, 'descargarReporte'])->name('admin.reporte.excel');
-
-        // Ventas en espera & Acciones de Control
         Route::get('/ventas-espera/listar', [AdminController::class, 'listarVentasEspera'])->name('admin.ventas.espera');
         Route::delete('/ventas/cancelar/{id}', [AdminController::class, 'cancelarVenta'])->name('ventas.cancelar');
-        Route::get('/abrir-cajon-manual', [VentaController::class, 'abrirCajonManual'])->name('admin.cajon.abrir');
         Route::post('/ventas/sincronizar-offline', [VentaController::class, 'sincronizar'])->name('admin.ventas.sincronizar');
-
-        // Configuración de Hardware (impresora, cajón, báscula)
-        Route::get('/configuracion-hardware', [ConfiguracionHardwareController::class, 'edit'])->name('admin.hardware.edit');
-        Route::put('/configuracion-hardware', [ConfiguracionHardwareController::class, 'update'])->name('admin.hardware.update');
     });
 });

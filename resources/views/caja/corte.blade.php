@@ -1,6 +1,6 @@
 @extends('layouts.cajero')
 
-@section('title', 'Movimientos de Caja')
+@section('title', 'Flujo de caja')
 
 @section('content')
 <div x-data="{ tab: 'ventas', ventaAbierta: null, modalGasto: false }" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
@@ -273,7 +273,6 @@
                                         {{ $g->categoria }}
                                     </span>
                                 </td>
-                                <td class="p-4 text-center text-zinc-400 dark:text-zinc-500 text-[10px] font-black uppercase">{{ $g->created_at->format('H:i') }}</td>
                                 <td class="p-4 pr-6 text-right font-black italic text-red-600 dark:text-red-500 tabular-nums">-${{ number_format($g->monto, 2) }}</td>
                             </tr>
                             @empty
