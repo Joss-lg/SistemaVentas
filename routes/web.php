@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AutorizacionCajaController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\ConfiguracionHardwareController;
 use App\Http\Controllers\DepartamentoController;
@@ -64,6 +65,10 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::middleware(['caja.abierta'])->group(function () {
 
+        // Solicitud y Estado de Autorización de Caja por Faltante
+        Route::post('/caja/autorizacion/solicitar', [AutorizacionCajaController::class, 'solicitar'])->name('caja.autorizacion.solicitar');
+        Route::get('/caja/autorizacion/estado', [AutorizacionCajaController::class, 'estado'])->name('caja.autorizacion.estado');
+
         // Punto de Venta (POS)
         Route::prefix('ventas')->name('ventas.')->controller(VentaController::class)->group(function () {
             Route::get('/', 'index')->name('index');
@@ -82,20 +87,20 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/inventario/agregar-stock', [InventarioController::class, 'agregarStock'])->name('inventario.agregar-stock');
 
-        // Impresión / Cajón (vista vieja de window.print, sin permiso especial)
+        // Impresión / Cajón
         Route::get('/admin/impresion/abrir-cajon', fn() => view('admin.impresion.abrir_cajon'))->name('impresion.abrir-cajon');
 
         // Corte de Caja — cualquier cajero con turno abierto
         Route::get('/admin/corte', [CajaController::class, 'corteIndex'])->name('admin.corte');
         Route::post('/admin/corte/guardar', [CajaController::class, 'corteStore'])->name('admin.corte.store');
 
-        // Gastos manuales del turno — se movió aquí desde soloAdmin, cualquier cajero con turno abierto lo usa
+        // Gastos manuales del turno — cualquier cajero con turno abierto
         Route::post('/admin/gastos', [GastoController::class, 'store'])->name('gastos.store');
     });
 
     /*
     |--------------------------------------------------------------------------
-    | CRUD Productos — por permiso, no exclusivo de soloAdmin
+    | CRUD Productos — por permiso
     |--------------------------------------------------------------------------
     */
     Route::prefix('admin/productos')->name('productos.')->controller(AdminController::class)->group(function () {
@@ -143,7 +148,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.dashboard')
         ->middleware('permiso:dashboard.ver');
 
-    // Usuarios / Cajeros — por permiso (incluye asignar permisos)
+    // Usuarios / Cajeros — por permiso
     Route::prefix('admin/usuarios')->name('admin.usuarios.')->controller(AdminController::class)->middleware('permiso:usuarios.gestionar')->group(function () {
         Route::get('/', 'usuariosIndex')->name('index');
         Route::post('/guardar', 'usuariosStore')->name('store');
@@ -159,13 +164,17 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Rutas que se quedan exclusivas de soloAdmin (no están en la lista de
-    | permisos — control operativo de ventas, no gestión administrativa)
+    | Rutas exclusivas de soloAdmin (Aprobaciones de Autorización y Control)
     |--------------------------------------------------------------------------
     */
     Route::middleware(['soloAdmin'])->prefix('admin')->group(function () {
         Route::get('/ventas-espera/listar', [AdminController::class, 'listarVentasEspera'])->name('admin.ventas.espera');
         Route::delete('/ventas/cancelar/{id}', [AdminController::class, 'cancelarVenta'])->name('ventas.cancelar');
         Route::post('/ventas/sincronizar-offline', [VentaController::class, 'sincronizar'])->name('admin.ventas.sincronizar');
+        
+        // Autorizaciones de Faltante en Caja para el Administrador
+        Route::get('/autorizaciones', [AutorizacionCajaController::class, 'index'])->name('admin.autorizaciones.index');
+        Route::post('/autorizaciones/{id}/aprobar', [AutorizacionCajaController::class, 'aprobar'])->name('admin.autorizaciones.aprobar');
+        Route::post('/autorizaciones/{id}/rechazar', [AutorizacionCajaController::class, 'rechazar'])->name('admin.autorizaciones.rechazar');
     });
 });

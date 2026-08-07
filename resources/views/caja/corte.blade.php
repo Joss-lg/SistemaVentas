@@ -3,7 +3,7 @@
 @section('title', 'Flujo de caja')
 
 @section('content')
-<div x-data="{ tab: 'ventas', ventaAbierta: null, modalGasto: false }" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
+<div x-data="corteCaja({{ $totalSistema }})" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
 
     {{-- ENCABEZADO --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-6">
@@ -16,7 +16,7 @@
             </p>
         </div>
         <button @click="modalGasto = true"
-            class="px-5 py-3 bg-red-600 hover:bg-red-500 text-white font-black italic uppercase text-xs tracking-widest rounded-2xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2">
+            class="px-5 py-3 bg-red-600 hover:bg-red-500 text-white font-black italic uppercase text-xs tracking-widest rounded-2xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer">
             <i class="fas fa-plus text-xs"></i>
             <span>Registrar Gasto</span>
         </button>
@@ -24,7 +24,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {{-- ===================== COLUMNA IZQUIERDA: RESUMEN FIJO ===================== --}}
+        {{-- COLUMNA IZQUIERDA: RESUMEN FIJO --}}
         <div class="lg:col-span-1 space-y-6 lg:sticky lg:top-6 self-start">
 
             {{-- EFECTIVO ESPERADO --}}
@@ -87,10 +87,10 @@
                 <span class="text-xl font-black italic text-white">${{ number_format($ventasDelTurno, 2) }}</span>
             </div>
 
-            {{-- FORMULARIO DE CIERRE --}}
+            {{-- FORMULARIO DE CIERRE DE CAJA CON INTERCEPCIÓN DE FALTANTE --}}
             <div class="bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 p-7 rounded-3xl shadow-2xl">
                 <h3 class="text-xs font-black uppercase tracking-widest text-zinc-500 mb-5">Finalizar Turno</h3>
-                <form action="{{ route('admin.corte.store') }}" method="POST" id="formCorte" class="space-y-5">
+                <form action="{{ route('admin.corte.store') }}" method="POST" id="formCorte" @submit="validarCierre($event)" class="space-y-5">
                     @csrf
                     <input type="hidden" name="ventas_esperadas" id="ventas_esperadas" value="{{ $totalSistema }}">
                     <input type="hidden" name="monto_inicial" value="{{ $montoInicial }}">
@@ -101,38 +101,45 @@
                         </label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-zinc-300 dark:text-zinc-700">$</span>
-                        <input type="number" step="0.01" name="efectivo_real" id="efectivo_real" required
-                            class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl py-4 pl-9 pr-4 text-2xl font-black text-green-600 dark:text-green-500 italic focus:outline-none focus:border-orange-500 dark:focus:border-orange-500/50 transition-all placeholder-zinc-300 dark:placeholder-zinc-800"
-                            placeholder="0.00">
+                            <input type="number" step="0.01" name="efectivo_real" id="efectivo_real" x-model="efectivoReal" required
+                                class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl py-4 pl-9 pr-4 text-2xl font-black text-green-600 dark:text-green-500 italic focus:outline-none focus:border-orange-500 dark:focus:border-orange-500/50 transition-all placeholder-zinc-300 dark:placeholder-zinc-800"
+                                placeholder="0.00">
                         </div>
                     </div>
 
+                    <template x-if="estadoAutorizacion === 'aprobada'">
+                        <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2 text-emerald-500 text-xs font-bold">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Faltante autorizado por <strong x-text="autorizadoPor"></strong>.</span>
+                        </div>
+                    </template>
+
                     <button type="submit"
-                            class="w-full bg-orange-600 hover:bg-orange-500 text-white font-black italic py-4 rounded-2xl transition-all uppercase text-xs tracking-[0.2em] shadow-xl shadow-orange-900/30 transform hover:scale-[1.02] active:scale-95">
+                        class="w-full bg-orange-600 hover:bg-orange-500 text-white font-black italic py-4 rounded-2xl transition-all uppercase text-xs tracking-[0.2em] shadow-xl shadow-orange-900/30 transform hover:scale-[1.02] active:scale-95 cursor-pointer">
                         GUARDAR Y CERRAR CAJA
                     </button>
                 </form>
             </div>
         </div>
 
-        {{-- ===================== COLUMNA DERECHA: PESTAÑAS ===================== --}}
+        {{-- COLUMNA DERECHA: PESTAÑAS --}}
         <div class="lg:col-span-2 space-y-4">
 
             {{-- SELECTOR DE PESTAÑAS --}}
             <div class="flex items-center gap-2 bg-white dark:bg-[#0d0d0d] border border-zinc-200 dark:border-white/5 rounded-2xl p-1.5 shadow-xl">
                 <button @click="tab = 'ventas'"
                         :class="tab === 'ventas' ? 'bg-red-600 text-white shadow-lg' : 'text-zinc-500 hover:text-red-600'"
-                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all">
+                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all cursor-pointer">
                     <i class="fas fa-receipt"></i> Ventas ({{ $ventasDetalle->count() }})
                 </button>
                 <button @click="tab = 'proveedores'"
                         :class="tab === 'proveedores' ? 'bg-red-600 text-white shadow-lg' : 'text-zinc-500 hover:text-red-600'"
-                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all">
+                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all cursor-pointer">
                     <i class="fas fa-truck-loading"></i> Proveedores ({{ $comprasDelTurno->count() }})
                 </button>
                 <button @click="tab = 'gastos'"
                         :class="tab === 'gastos' ? 'bg-red-600 text-white shadow-lg' : 'text-zinc-500 hover:text-red-600'"
-                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all">
+                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic uppercase text-[11px] tracking-widest transition-all cursor-pointer">
                     <i class="fas fa-file-invoice-dollar"></i> Gastos ({{ $gastosDelTurno->count() }})
                 </button>
             </div>
@@ -144,7 +151,7 @@
                     @forelse($ventasDetalle as $v)
                         <div>
                             <button type="button" @click="ventaAbierta = (ventaAbierta === {{ $v->id }}) ? null : {{ $v->id }}"
-                                    class="w-full flex items-center justify-between p-4 text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors">
+                                    class="w-full flex items-center justify-between p-4 text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer">
                                 <div class="flex items-center space-x-3">
                                     <i class="fas fa-chevron-right text-red-600 text-[10px] transition-transform"
                                        :class="ventaAbierta === {{ $v->id }} ? 'rotate-90' : ''"></i>
@@ -260,7 +267,6 @@
                             <tr>
                                 <th class="p-4 pl-6 font-black">Descripción</th>
                                 <th class="p-4 font-black">Categoría</th>
-                                <th class="p-4 font-black text-center">Hora</th>
                                 <th class="p-4 pr-6 font-black text-right">Monto</th>
                             </tr>
                         </thead>
@@ -277,7 +283,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="p-12 text-center text-zinc-400 dark:text-zinc-600 font-bold italic uppercase text-xs">
+                                <td colspan="3" class="p-12 text-center text-zinc-400 dark:text-zinc-600 font-bold italic uppercase text-xs">
                                     <i class="fas fa-file-invoice-dollar text-3xl mb-3 block opacity-30"></i>
                                     Sin gastos manuales en este turno.
                                 </td>
@@ -291,45 +297,33 @@
     </div>
 
     {{-- MODAL: NUEVO GASTO --}}
-    <div x-show="modalGasto"
-         x-transition
-         x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-
+    <div x-show="modalGasto" x-transition x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div @click.away="modalGasto = false" class="bg-white dark:bg-[#121212] border border-zinc-200 dark:border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
             <form action="{{ route('gastos.store') }}" method="POST">
                 @csrf
-
                 <div class="p-4 border-b border-zinc-100 dark:border-white/5 flex justify-between items-center">
                     <h3 class="text-sm font-black italic uppercase tracking-wider text-zinc-900 dark:text-white">
                         Nuevo <span class="text-red-600">Gasto Manual</span>
                     </h3>
-                    <button type="button" @click="modalGasto = false" class="text-zinc-400 hover:text-white text-base">&times;</button>
+                    <button type="button" @click="modalGasto = false" class="text-zinc-400 hover:text-white text-base cursor-pointer">&times;</button>
                 </div>
 
                 <div class="p-5 space-y-4">
                     <div>
-                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">
-                            Descripción del Gasto
-                        </label>
+                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Descripción del Gasto</label>
                         <input type="text" name="descripcion" required placeholder="EJ. PAGO DE LUZ"
                             class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-zinc-900 dark:text-white font-bold uppercase italic focus:outline-none focus:border-red-500 transition-all placeholder-zinc-300 dark:placeholder-zinc-800">
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">
-                            Monto ($)
-                        </label>
+                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Monto ($)</label>
                         <input type="number" step="0.01" name="monto" required placeholder="0.00"
                             class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-2xl font-black italic text-red-600 dark:text-red-500 focus:outline-none focus:border-red-500 transition-all placeholder-zinc-300 dark:placeholder-zinc-800">
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">
-                            Categoría
-                        </label>
-                        <select name="categoria"
-                            class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-zinc-900 dark:text-white font-bold uppercase italic focus:outline-none focus:border-red-500 transition-all">
+                        <label class="block text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Categoría</label>
+                        <select name="categoria" class="w-full bg-zinc-50 dark:bg-black border-2 border-zinc-100 dark:border-white/10 rounded-2xl p-4 text-zinc-900 dark:text-white font-bold uppercase italic focus:outline-none focus:border-red-500 transition-all">
                             <option value="GENERAL">General</option>
                             <option value="INVENTARIO">Inventario / Mercancía</option>
                             <option value="SERVICIOS">Servicios (Luz/Agua/Net)</option>
@@ -339,14 +333,75 @@
                 </div>
 
                 <div class="p-4 border-t border-zinc-100 dark:border-white/5 flex justify-end space-x-3 bg-zinc-50 dark:bg-white/[0.01]">
-                    <button type="button" @click="modalGasto = false" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-700 dark:hover:text-white transition-colors">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold italic uppercase text-xs tracking-wider rounded-xl transition-all shadow-md shadow-red-600/20 cursor-pointer">
-                        Registrar Salida
-                    </button>
+                    <button type="button" @click="modalGasto = false" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-700 dark:hover:text-white transition-colors cursor-pointer">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold italic uppercase text-xs tracking-wider rounded-xl transition-all shadow-md shadow-red-600/20 cursor-pointer">Registrar Salida</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    {{-- MODAL: AUTORIZACIÓN DE FALTANTE DE CAJA --}}
+    <div x-show="modalAutorizacion" x-transition x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div @click.away="modalAutorizacion = false" class="bg-white dark:bg-[#121212] border border-zinc-200 dark:border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 text-center">
+            
+            <div class="w-16 h-16 bg-red-600/10 border border-red-600/20 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+
+            <h3 class="text-lg font-black italic uppercase text-zinc-900 dark:text-white tracking-wider mb-2">
+                Faltante en Caja
+            </h3>
+
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 font-medium mb-6">
+                El efectivo en caja (<strong class="text-red-500" x-text="'$' + (parseFloat(efectivoReal) || 0).toFixed(2)"></strong>) es menor al esperado (<strong class="text-zinc-800 dark:text-zinc-200">${{ number_format($totalSistema, 2) }}</strong>). Requiere autorización para cerrar.
+            </p>
+
+            <template x-if="estadoAutorizacion === 'ninguna' || estadoAutorizacion === 'rechazada'">
+                <div>
+                    <template x-if="estadoAutorizacion === 'rechazada'">
+                        <div class="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold">
+                            La solicitud fue rechazada. Puedes volver a intentar.
+                        </div>
+                    </template>
+                    <button @click="solicitarPermiso()" :disabled="solicitando"
+                        class="w-full bg-red-600 hover:bg-red-500 text-white font-black italic py-3.5 rounded-2xl transition-all uppercase text-xs tracking-widest shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fas fa-paper-plane text-xs" x-show="!solicitando"></i>
+                        <i class="fas fa-spinner fa-spin text-xs" x-show="solicitando"></i>
+                        <span x-text="solicitando ? 'Enviando...' : 'Solicitar Autorización al Admin'"></span>
+                    </button>
+                </div>
+            </template>
+
+            <template x-if="estadoAutorizacion === 'pendiente'">
+                <div class="p-5 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-center gap-2 text-amber-500 text-xs font-black uppercase tracking-widest">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                        <span>Esperando Aprobación</span>
+                    </div>
+                    <p class="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">
+                        El administrador puede autorizar de forma remota o local.
+                    </p>
+                </div>
+            </template>
+
+            <template x-if="estadoAutorizacion === 'aprobada'">
+                <div class="p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-3">
+                    <div class="text-emerald-500 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Aprobado por el Administrador</span>
+                    </div>
+                    <p class="text-xs text-zinc-300 font-bold">
+                        Autorizado por: <span class="text-white uppercase font-black" x-text="autorizadoPor"></span>
+                    </p>
+                    <button @click="modalAutorizacion = false" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black italic py-3 rounded-xl text-xs uppercase tracking-widest cursor-pointer">
+                        Continuar Cierre
+                    </button>
+                </div>
+            </template>
+
+            <button @click="modalAutorizacion = false" class="mt-4 text-[10px] font-black uppercase text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer">
+                Regresar
+            </button>
         </div>
     </div>
 

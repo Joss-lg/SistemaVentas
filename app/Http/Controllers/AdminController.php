@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AutorizacionCaja;
 use App\Models\Compra;
 use App\Models\CorteCaja;
 use App\Models\Gasto;
@@ -134,16 +135,25 @@ class AdminController extends Controller
     }
 
     /**
-     * HISTORIAL DE CAJA (solo admin — turnos ya cerrados)
+     * HISTORIAL DE CAJA (solo admin — turnos y autorizaciones)
      */
     public function historialCajas()
     {
-        $cortes = CorteCaja::with('usuario')
-            ->orderByRaw('fecha_cierre IS NULL DESC') 
-            ->orderBy('fecha_apertura', 'desc')
+        // Carga de solicitudes pendientes usando la relación 'solicitante'
+        $solicitudesPendientes = AutorizacionCaja::with(['solicitante', 'corte'])
+            ->where('estado', 'pendiente')
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('admin.cajas.index', compact('cortes'));
+        // Historial general de cortes de caja
+        $cortesHistorial = CorteCaja::with('usuario')
+            ->orderByRaw('fecha_cierre IS NULL DESC') 
+            ->orderBy('fecha_apertura', 'desc')
+            ->paginate(15);
+
+        $cortes = $cortesHistorial;
+
+        return view('admin.cajas.index', compact('cortesHistorial', 'solicitudesPendientes', 'cortes'));
     }
 
     public function detalleCaja($id)

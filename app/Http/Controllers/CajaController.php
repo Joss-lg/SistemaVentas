@@ -109,62 +109,75 @@ class CajaController extends Controller
     }
 
     public function corteStore(Request $request)
-    {
-        $request->validate([
-            'efectivo_real' => 'required|numeric',
+{
+    $request->validate([
+        'efectivo_real' => 'required|numeric',
+    ]);
+
+    $turno = CorteCaja::turnoActivo(auth()->id());
+
+    if (!$turno) {
+        return redirect()->route('caja.apertura')->with('error', 'No tienes un turno abierto.');
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $fechaApertura = $turno->fecha_apertura;
+
+        $queryVentas = Venta::where('usuario_id', auth()->id())
+            ->where('fecha', '>=', $fechaApertura)
+            ->where('estado', '!=', 'cancelada');
+
+        $ventasEfectivoRaw = (clone $queryVentas)->where('tipo_pago', 'efectivo')->get(['pago_cliente', 'cambio', 'total']);
+        $ventasEfectivo = $ventasEfectivoRaw->sum(function ($v) {
+            if (is_null($v->pago_cliente) || is_null($v->cambio)) {
+                return $v->total;
+            }
+            return $v->pago_cliente - $v->cambio;
+        });
+
+        $ventasTarjeta = (clone $queryVentas)->where('tipo_pago', 'tarjeta')->sum('total');
+        $ventasTransferencia = (clone $queryVentas)->where('tipo_pago', 'transferencia')->sum('total');
+
+        $totalCompras = Compra::where('created_at', '>=', $fechaApertura)->sum('costo_total');
+        $totalGastos = Gasto::where('created_at', '>=', $fechaApertura)->sum('monto');
+
+        $ventasEsperadas = ($turno->monto_inicial + $ventasEfectivo) - $totalCompras - $totalGastos;
+
+        $difference = $request->efectivo_real - $ventasEsperadas;
+
+        // NUEVO: si hay faltante, exige autorización aprobada para este turno
+        if ($difference < 0) {
+            $autorizacion = \App\Models\AutorizacionCaja::aprobadaDe($turno->id);
+
+            if (!$autorizacion) {
+                DB::rollBack();
+                return redirect()->back()
+                    ->with('requiere_autorizacion', true)
+                    ->with('faltante', $difference)
+                    ->withInput();
+            }
+        }
+
+        $turno->update([
+            'fecha_cierre'          => now(),
+            'total_ventas_efectivo' => $ventasEfectivo,
+            'total_ventas_tarjeta'  => $ventasTarjeta,
+            'total_transferencia'   => $ventasTransferencia,
+            'total_esperado'        => $ventasEsperadas,
+            'total_contado'         => $request->efectivo_real,
+            'difference'            => $difference,
+            'notas'                 => 'Corte de caja realizado',
         ]);
 
-        $turno = CorteCaja::turnoActivo(auth()->id());
+        DB::commit();
 
-        if (!$turno) {
-            return redirect()->route('caja.apertura')->with('error', 'No tienes un turno abierto.');
-        }
+        return redirect()->route('caja.apertura')->with('success', 'Corte guardado. Caja cerrada.');
 
-        try {
-            DB::beginTransaction();
-
-            $fechaApertura = $turno->fecha_apertura;
-
-            $queryVentas = Venta::where('usuario_id', auth()->id())
-                ->where('fecha', '>=', $fechaApertura)
-                ->where('estado', '!=', 'cancelada');
-
-            $ventasEfectivoRaw = (clone $queryVentas)->where('tipo_pago', 'efectivo')->get(['pago_cliente', 'cambio', 'total']);
-            $ventasEfectivo = $ventasEfectivoRaw->sum(function ($v) {
-                if (is_null($v->pago_cliente) || is_null($v->cambio)) {
-                    return $v->total;
-                }
-                return $v->pago_cliente - $v->cambio;
-            });
-
-            $ventasTarjeta = (clone $queryVentas)->where('tipo_pago', 'tarjeta')->sum('total');
-            $ventasTransferencia = (clone $queryVentas)->where('tipo_pago', 'transferencia')->sum('total');
-
-            $totalCompras = Compra::where('created_at', '>=', $fechaApertura)->sum('costo_total');
-            $totalGastos = Gasto::where('created_at', '>=', $fechaApertura)->sum('monto');
-
-            $ventasEsperadas = ($turno->monto_inicial + $ventasEfectivo) - $totalCompras - $totalGastos;
-
-            $difference = $request->efectivo_real - $ventasEsperadas;
-
-            $turno->update([
-                'fecha_cierre'          => now(),
-                'total_ventas_efectivo' => $ventasEfectivo,
-                'total_ventas_tarjeta'  => $ventasTarjeta,
-                'total_transferencia'   => $ventasTransferencia,
-                'total_esperado'        => $ventasEsperadas,
-                'total_contado'         => $request->efectivo_real,
-                'difference'            => $difference,
-                'notas'                 => 'Corte de caja realizado',
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('caja.apertura')->with('success', 'Corte guardado. Caja cerrada.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Error al guardar el corte: '.$e->getMessage());
-        }
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()->with('error', 'Error al guardar el corte: '.$e->getMessage());
     }
+}
 }
