@@ -1,3 +1,7 @@
+@php
+    $userRol = strtolower(Auth::user()->rol ?? '');
+    $esAdmin = ($userRol === 'admin' || $userRol === 'administrador');
+@endphp
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">
 <head>
@@ -16,7 +20,6 @@
     </script>
 
     <script src="{{ asset('js/sweetalert2.js') }}"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -24,7 +27,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .font-digital { font-family: 'Orbitron', sans-serif; }
         [x-cloak] { display: none !important; }
@@ -52,6 +55,9 @@
     data-bascula-activada="{{ $configHardware->bascula_activada ? 'true' : 'false' }}"
     data-bascula-baud="{{ $configHardware->bascula_baud_rate }}"
     data-modo-simulado="{{ $configHardware->modo_simulado ? 'true' : 'false' }}"
+    @if($esAdmin)
+    data-ruta-autorizaciones-json="{{ route('admin.autorizaciones.json') }}"
+    @endif
 >
 
     {{-- WRAPPER PRINCIPAL CONTENEDOR (Fijo al 100% del viewport) --}}

@@ -6,10 +6,9 @@
     $active = "bg-red-600 text-white shadow-[0_6px_14px_rgba(220,38,38,0.3)]";
     $inactive = "text-zinc-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5";
 
-    $tieneAlgoAdmin = $esAdmin || collect([
-        'dashboard.ver', 'departamentos.gestionar', 'productos.gestionar',
-        'caja.historial', 'reportes.ver', 'compras.ver', 'hardware.configurar', 'usuarios.gestionar',
-    ])->contains(fn($slug) => $user->tienePermiso($slug));
+    $tieneAlgoCatalogo = $esAdmin || $user->tienePermiso('departamentos.gestionar') || $user->tienePermiso('productos.gestionar');
+    $tieneAlgoNegocio = $esAdmin || $user->tienePermiso('dashboard.ver') || $user->tienePermiso('reportes.ver') || $user->tienePermiso('compras.ver');
+    $tieneAlgoSistema = $esAdmin || $user->tienePermiso('hardware.configurar') || $user->tienePermiso('usuarios.gestionar');
 @endphp
 
 <style>
@@ -77,7 +76,6 @@
                 <span class="text-red-600">F1</span>
             </h2>
 
-            {{-- Botón para colapsar en escritorio --}}
             <button @click="colapsado = !colapsado"
                 class="hidden md:block p-2 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors focus:outline-none cursor-pointer"
                 :class="colapsado ? 'mx-auto mt-1' : ''"
@@ -85,7 +83,6 @@
                 <i class="fas fa-bars text-base"></i>
             </button>
 
-            {{-- Botón X para cerrar en móviles --}}
             <button @click="mobileOpen = false" 
                 class="md:hidden p-2 text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-white rounded-lg focus:outline-none cursor-pointer">
                 <i class="fas fa-times text-base"></i>
@@ -94,6 +91,7 @@
 
         {{-- NAVEGACIÓN --}}
         <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto overflow-x-hidden no-scrollbar pt-4">
+
             @if($user->tienePermiso('cajon.abrir'))
             <button id="btn-abrir-cajon"
                 :title="(colapsado && !mobileOpen) ? 'Abrir Cajón' : ''"
@@ -104,6 +102,7 @@
             </button>
             @endif
 
+            {{-- ===================== OPERACIÓN ===================== --}}
             <p x-show="!colapsado || mobileOpen" x-transition class="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 ml-1 border-b border-zinc-100 dark:border-white/5 pb-1 whitespace-nowrap">Operación</p>
 
             @if(!$esAdmin && !\App\Models\CorteCaja::turnoActivo(Auth::id()))
@@ -134,17 +133,51 @@
                 </a>
             @endif
 
-            <a href="{{ route('admin.corte') }}"
-                :title="(colapsado && !mobileOpen) ? 'Corte de Caja' : ''"
-                :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.corte') ? "'$active'" : "'$inactive'" }}]"
-                class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
-                <i class="fas fa-calculator text-sm flex-shrink-0"></i>
-                <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Flujo de caja</span>
-            </a>
+            {{-- ===================== CAJA ===================== --}}
+            <div class="pt-3 mt-3 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
+                <p x-show="!colapsado || mobileOpen" x-transition class="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2 ml-1 whitespace-nowrap">Caja</p>
 
-            @if($tieneAlgoAdmin)
+                <a href="{{ route('admin.corte') }}"
+                    :title="(colapsado && !mobileOpen) ? 'Flujo de Caja' : ''"
+                    :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.corte') ? "'$active'" : "'$inactive'" }}]"
+                    class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+                    <i class="fas fa-calculator text-sm flex-shrink-0"></i>
+                    <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Flujo de caja</span>
+                </a>
+
+                @if($user->tienePermiso('caja.historial'))
+                <a href="{{ route('admin.cajas.index') }}" :title="(colapsado && !mobileOpen) ? 'Historial de Caja' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.cajas.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+                    <i class="fas fa-history text-sm flex-shrink-0"></i>
+                    <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Historial de Caja</span>
+                </a>
+                @endif
+            </div>
+
+            {{-- ===================== CATÁLOGO ===================== --}}
+            @if($tieneAlgoCatalogo)
                 <div class="pt-3 mt-3 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
-                    <p x-show="!colapsado || mobileOpen" x-transition class="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-2 ml-1 whitespace-nowrap">Administración</p>
+                    <p x-show="!colapsado || mobileOpen" x-transition class="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-2 ml-1 whitespace-nowrap">Catálogo</p>
+
+                    @if($user->tienePermiso('departamentos.gestionar'))
+                    <a href="{{ route('departamentos.index') }}" :title="(colapsado && !mobileOpen) ? 'Categoría' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('departamentos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+                        <i class="fas fa-tag text-sm flex-shrink-0"></i>
+                        <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Categoría</span>
+                    </a>
+                    @endif
+
+                    @if($user->tienePermiso('productos.gestionar'))
+                    <a href="{{ route('productos.index') }}" :title="(colapsado && !mobileOpen) ? 'Productos' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('productos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
+                        <i class="fas fa-box text-sm flex-shrink-0"></i>
+                        <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Productos</span>
+                    </a>
+                    @endif
+                </div>
+            @endif
+
+            {{-- ===================== NEGOCIO ===================== --}}
+            @if($tieneAlgoNegocio)
+                <div class="pt-3 mt-3 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
+                    <p x-show="!colapsado || mobileOpen" x-transition class="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-2 ml-1 whitespace-nowrap">Negocio</p>
 
                     @if($user->tienePermiso('dashboard.ver'))
                     <a href="{{ route('admin.dashboard') }}" :title="(colapsado && !mobileOpen) ? 'Dashboard' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.dashboard') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
@@ -153,31 +186,6 @@
                     </a>
                     @endif
 
-                    {{-- DEPARTAMENTOS --}}
-                    @if($user->tienePermiso('departamentos.gestionar'))
-                    <a href="{{ route('departamentos.index') }}" :title="(colapsado && !mobileOpen) ? 'Categoría' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('departamentos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
-                        <i class="fas fa-tag text-sm flex-shrink-0"></i>
-                        <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Categoría</span>
-                    </a>
-                    @endif
-
-                    {{-- PRODUCTOS --}}
-                    @if($user->tienePermiso('productos.gestionar'))
-                    <a href="{{ route('productos.index') }}" :title="(colapsado && !mobileOpen) ? 'Productos' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('productos.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
-                        <i class="fas fa-box text-sm flex-shrink-0"></i>
-                        <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Productos</span>
-                    </a>
-                    @endif
-
-                    {{-- HISTORIAL DE CAJA --}}
-                    @if($user->tienePermiso('caja.historial'))
-                    <a href="{{ route('admin.cajas.index') }}" :title="(colapsado && !mobileOpen) ? 'Historial de Caja' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.cajas.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
-                        <i class="fas fa-history text-sm flex-shrink-0"></i>
-                        <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Historial de Caja</span>
-                    </a>
-                    @endif
-
-                    {{-- REPORTES GENERAL --}}
                     @if($user->tienePermiso('reportes.ver'))
                     <a href="{{ route('admin.reportes') }}" :title="(colapsado && !mobileOpen) ? 'Reportes General' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.reportes') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                         <i class="fas fa-chart-bar text-sm flex-shrink-0"></i>
@@ -185,15 +193,20 @@
                     </a>
                     @endif
 
-                    {{-- COMPRAS --}}
                     @if($user->tienePermiso('compras.ver'))
                     <a href="{{ route('admin.compras.index') }}" :title="(colapsado && !mobileOpen) ? 'Compras' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.compras.index') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                         <i class="fas fa-shopping-bag text-sm flex-shrink-0"></i>
                         <span x-show="!colapsado || mobileOpen" x-transition class="whitespace-nowrap">Proveedores</span>
                     </a>
                     @endif
+                </div>
+            @endif
 
-                    {{-- CONFIGURACIÓN DE HARDWARE --}}
+            {{-- ===================== SISTEMA ===================== --}}
+            @if($tieneAlgoSistema)
+                <div class="pt-3 mt-3 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
+                    <p x-show="!colapsado || mobileOpen" x-transition class="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-2 ml-1 whitespace-nowrap">Sistema</p>
+
                     @if($user->tienePermiso('hardware.configurar'))
                     <a href="{{ route('admin.hardware.edit') }}" :title="(colapsado && !mobileOpen) ? 'Config. Hardware' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.hardware.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                         <i class="fas fa-microchip text-sm flex-shrink-0"></i>
@@ -201,7 +214,6 @@
                     </a>
                     @endif
 
-                    {{-- GESTIONAR CAJEROS --}}
                     @if($user->tienePermiso('usuarios.gestionar'))
                     <a href="{{ route('admin.usuarios.index') }}" :title="(colapsado && !mobileOpen) ? 'Gestionar Cajeros' : ''" :class="[(colapsado && !mobileOpen) ? 'justify-center' : 'space-x-3', {{ request()->routeIs('admin.usuarios.*') ? "'$active'" : "'$inactive'" }}]" class="flex items-center p-3 rounded-xl font-bold italic uppercase text-xs tracking-wide transition-all">
                         <i class="fas fa-users-cog text-sm flex-shrink-0"></i>
@@ -222,7 +234,6 @@
         {{-- FOOTER CON BOTÓN DE MODO Y CERRAR SESIÓN --}}
         <div class="p-3 border-t border-zinc-200 dark:border-white/5 space-y-2 shrink-0">
 
-            {{-- SWITCH DE TEMA (expandido o en móvil) --}}
             <button x-show="!colapsado || mobileOpen" x-transition @click="toggleTema()"
                 title="Cambiar Modo Claro / Oscuro"
                 class="relative w-full h-10 flex items-center rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 transition-colors cursor-pointer focus:outline-none overflow-hidden">
@@ -238,7 +249,6 @@
                 </span>
             </button>
 
-            {{-- BOTÓN DE MODO (colapsado en escritorio, solo ícono) --}}
             <button x-show="colapsado && !mobileOpen" x-transition @click="toggleTema()"
                 title="Cambiar Modo Claro / Oscuro"
                 class="w-full flex items-center justify-center h-10 rounded-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors cursor-pointer focus:outline-none">

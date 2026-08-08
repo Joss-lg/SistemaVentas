@@ -1,4 +1,4 @@
-const corteCajaComponent = function(totalSistema = 0) {
+const corteCajaComponent = function(totalSistema = 0, corteCajaId = null) {
     return {
         tab: 'ventas',
         efectivoReal: '',
@@ -9,6 +9,7 @@ const corteCajaComponent = function(totalSistema = 0) {
         modalAutorizacion: false,
         ventaAbierta: null,
         totalSistema: parseFloat(totalSistema) || 0,
+        corteCajaId: corteCajaId,
         timerPoll: null,
 
         init() {
@@ -16,8 +17,8 @@ const corteCajaComponent = function(totalSistema = 0) {
         },
 
         getThemeColors() {
-            const isDark = document.documentElement.classList.contains('dark') || 
-                           document.body.classList.contains('dark-mode') || 
+            const isDark = document.documentElement.classList.contains('dark') ||
+                           document.body.classList.contains('dark-mode') ||
                            window.userTheme === 'dark';
 
             return {
@@ -34,7 +35,7 @@ const corteCajaComponent = function(totalSistema = 0) {
 
         async consultarEstadoInicial() {
             try {
-                const res = await fetch('/caja/autorizacion/estado');
+                const res = await fetch(`/caja/autorizacion/estado?corte_caja_id=${this.corteCajaId}`);
                 if (res.ok) {
                     const data = await res.json();
                     this.estadoAutorizacion = data.estado || 'ninguna';
@@ -70,9 +71,9 @@ const corteCajaComponent = function(totalSistema = 0) {
                 const diferencia = (total - efectivo).toFixed(2);
 
                 try {
-                    const resEstado = await fetch('/caja/autorizacion/estado');
+                    const resEstado = await fetch(`/caja/autorizacion/estado?corte_caja_id=${this.corteCajaId}`);
                     const dataEstado = await resEstado.json();
-                    
+
                     this.estadoAutorizacion = dataEstado.estado;
                     this.autorizadoPor = dataEstado.autorizado_por || '';
 
@@ -161,7 +162,14 @@ const corteCajaComponent = function(totalSistema = 0) {
             const theme = this.getThemeColors();
             this.solicitando = true;
 
-            const bodyPayload = { efectivo_real: efectivo };
+            const total = this.totalSistema;
+            const faltante = total - efectivo;
+
+            const bodyPayload = {
+                corte_caja_id: this.corteCajaId,
+                efectivo_real: efectivo,
+                faltante: faltante
+            };
             if (password) bodyPayload.admin_password = password;
 
             try {
@@ -169,6 +177,7 @@ const corteCajaComponent = function(totalSistema = 0) {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': csrfToken
                     },
                     body: JSON.stringify(bodyPayload)
@@ -221,9 +230,9 @@ const corteCajaComponent = function(totalSistema = 0) {
 
             this.timerPoll = setInterval(async () => {
                 try {
-                    const res = await fetch('/caja/autorizacion/estado');
+                    const res = await fetch(`/caja/autorizacion/estado?corte_caja_id=${this.corteCajaId}`);
                     const data = await res.json();
-                    
+
                     this.estadoAutorizacion = data.estado;
                     this.autorizadoPor = data.autorizado_por || '';
 
@@ -251,18 +260,12 @@ const corteCajaComponent = function(totalSistema = 0) {
     };
 };
 
-// Auto-exposición global inmediata apenas carga el módulo
 window.corteCaja = corteCajaComponent;
 
-if (window.Alpine) {
+document.addEventListener('alpine:init', () => {
     window.Alpine.data('corteCaja', corteCajaComponent);
-} else {
-    document.addEventListener('alpine:init', () => {
-        window.Alpine.data('corteCaja', corteCajaComponent);
-    });
-}
+});
 
-// Mantener exportación por compatibilidad si se importa en otro lado
 export function initCorteCaja() {
     // Ya se auto-registró arriba
 }

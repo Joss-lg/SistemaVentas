@@ -174,6 +174,7 @@ Route::middleware(['auth'])->group(function () {
         
         // Autorizaciones de Faltante en Caja para el Administrador
         Route::get('/autorizaciones', [AutorizacionCajaController::class, 'index'])->name('admin.autorizaciones.index');
+        Route::get('/autorizaciones/pendientes/json', [AutorizacionCajaController::class, 'listarPendientesJson'])->name('admin.autorizaciones.json');
         Route::post('/autorizaciones/{id}/aprobar', [AutorizacionCajaController::class, 'aprobar'])->name('admin.autorizaciones.aprobar');
         Route::post('/autorizaciones/{id}/rechazar', [AutorizacionCajaController::class, 'rechazar'])->name('admin.autorizaciones.rechazar');
     });

@@ -104,7 +104,8 @@ class CajaController extends Controller
             'totalGastos',
             'totalSistema',
             'totalCambio',
-            'fechaApertura'
+            'fechaApertura',
+            'turno'
         ));
     }
 

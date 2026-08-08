@@ -3,7 +3,7 @@
 @section('title', 'Flujo de caja')
 
 @section('content')
-<div x-data="corteCaja({{ $totalSistema }})" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
+<div x-data="corteCaja({{ $totalSistema }}, {{ $turno->id }})" class="max-w-7xl mx-auto space-y-6 p-4 md:p-0 transition-colors duration-300">
 
     {{-- ENCABEZADO --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-6">
